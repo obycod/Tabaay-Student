@@ -10,7 +10,7 @@ import base64
 
 # ===================== الإعدادات =====================
 APP_VERSION = "5.1_Apple_Pro_Smooth"
-_ENC_URL = "aHR0cHM6Ly9wZGQueGR0Lm15Ymx1ZWhvc3QubWUvdXBkYXRl"
+_ENC_URL = "aHR0cDovL3BkZC54ZHQubXlibHVlaG9zdC5tZS91cGRhdGU="
 BASE_URL_FILES = base64.b64decode(_ENC_URL).decode('utf-8')
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -53,6 +53,7 @@ class BackendEngine:
         self.is_fetching = False
         self.running_sync = False
         self.is_online = True
+        self.first_run = True
 
     def fetch_sizes_background(self, files):
         stage_sizes = {f['stage']: 0 for f in files}
@@ -91,6 +92,12 @@ class BackendEngine:
 
             pens = find_pens()
             current_pen = pens[0] if pens else None
+
+            if self.first_run:
+                self.first_run = False
+                if not current_pen:
+                    try: eel.setPenStatus(False, "", 0)()
+                    except: pass
 
             if current_pen and self.pen_drive != current_pen:
                 self.pen_drive = current_pen
@@ -134,6 +141,7 @@ class BackendEngine:
             threading.Thread(target=self.fetch_sizes_background, args=(files,), daemon=True).start()
         except Exception as e:
             print("Error fetching:", e)
+            self.pen_drive = None
         finally:
             self.is_fetching = False
 
