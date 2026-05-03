@@ -402,6 +402,8 @@ def eject_logic(drive_letter):
     eel.ejectFinished()()
 
 def check_for_app_updates():
+    # تأخير 3 ثواني لضمان فتح الواجهة بالكامل قبل إرسال أمر إظهار النافذة
+    time.sleep(3)
     try:
         url = f"https://app.altabaay.co/update/student_version.txt?nocache={time.time()}"
         r = requests.get(url, headers=HEADERS, timeout=5)
