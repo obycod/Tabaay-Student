@@ -24,9 +24,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install eel requests pyinstaller
 
-    - name: تحويل البرنامج إلى EXE (بواسطة PyInstaller و Eel)
-      run: |
-        python -m eel main.py web --onefile --noconsole --name "Tabaay_Student"
+        - name: تحويل البرنامج إلى EXE (بواسطة PyInstaller و Eel)
+        run: |
+          python -m eel main.py web --onefile --noconsole --name "Tabaay_Student" --icon=icon.ico
 
     - name: تجميع ملف التنصيب (بواسطة Inno Setup)
       run: |

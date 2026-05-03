@@ -8,7 +8,7 @@ OutputBaseFilename=Tabaay_Student_Setup
 Compression=lzma
 SolidCompression=yes
 ; أضف أيقونة إذا كان لديك ملف icon.ico
-; SetupIconFile=icon.ico
+SetupIconFile=icon.ico
 PrivilegesRequired=admin
 
 [Files]
