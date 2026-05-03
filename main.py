@@ -12,7 +12,7 @@ import socket
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ===================== الإعدادات =====================
-APP_VERSION = "5.5_Apple_Pro_Smooth"
+APP_VERSION = "5.6_Apple_Pro_Smooth"
 # إرجاع الرابط إلى HTTPS لتجنب حظر Bluehost لمنفذ 80
 # الرابط المشفر الأساسي للملازم يقرأ من مجلد update (حيث توجد ملفات alt و files.txt)
 _ENC_URL = "aHR0cHM6Ly9hbHRhYmFheS5jby91cGRhdGU="
@@ -454,8 +454,9 @@ def _auto_update_logic(url):
                 os.remove(exe_path)
         except: pass
 
-        # البدء بالتحميل من السيرفر
-        r = requests.get(url, stream=True, verify=False, timeout=30)
+        # البدء بالتحميل وتخطي كاش السيرفر لضمان سحب أحدث نسخة
+        dl_url = f"{url}?nocache={time.time()}" if "?" not in url else f"{url}&nocache={time.time()}"
+        r = requests.get(dl_url, stream=True, verify=False, timeout=30)
         r.raise_for_status()
         
         total_size = int(r.headers.get('content-length', 0))
@@ -473,9 +474,9 @@ def _auto_update_logic(url):
         eel.setUpdateStatus("جاري بدء التثبيت...")()
         time.sleep(1.5)
         
-        # الطريقة الرسمية لتشغيل ملف التنصيب إجبارياً وبصمت (/SILENT)
+        # تشغيل التحديث بصمت وإجبار الويندوز على إنهاء البرنامج القديم بالقوة لضمان الاستبدال
         import ctypes
-        ctypes.windll.shell32.ShellExecuteW(None, "runas", exe_path, "/SILENT", None, 1)
+        ctypes.windll.shell32.ShellExecuteW(None, "runas", exe_path, "/SILENT /FORCECLOSEAPPLICATIONS /SUPPRESSMSGBOXES", None, 1)
         
         # إغلاق البرنامج الحالي حتى يقدر الملف الجديد يتنصب بمكانه
         try: eel.closeApp()()
