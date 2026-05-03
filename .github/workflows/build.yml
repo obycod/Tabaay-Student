@@ -1,6 +1,5 @@
 name: Build and Release Tabaay Student
 
-# يشتغل السكربت تلقائياً كلما تسوي Push لفرع الـ main
 on:
   push:
     branches:
@@ -8,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest # استخدام سيرفر ويندوز من جيتهاب
+    runs-on: windows-latest
 
     steps:
     - name: سحب الكود من المستودع
@@ -17,21 +16,20 @@ jobs:
     - name: إعداد بيئة بايثون
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11' # نسخة بايثون مستقرة
+        python-version: '3.11'
 
     - name: تثبيت المكتبات المطلوبة
       run: |
         python -m pip install --upgrade pip
         pip install eel requests pyinstaller
 
-        - name: تحويل البرنامج إلى EXE (بواسطة PyInstaller و Eel)
-        run: |
-          python -m eel main.py web --onefile --noconsole --name "Tabaay_Student" --icon=icon.ico
-
-    - name: تجميع ملف التنصيب (بواسطة Inno Setup)
+    - name: تحويل البرنامج إلى EXE
       run: |
-        # Inno Setup مثبت مسبقاً في سيرفرات ويندوز التابعة لـ GitHub
-        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup.iss
+        python -m eel main.py web --onefile --noconsole --name "Tabaay_Student" --icon=icon.ico
+
+    - name: تجميع ملف التنصيب
+      run: |
+        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup.iss
 
     - name: رفع ملف التنصيب الجاهز
       uses: actions/upload-artifact@v4
