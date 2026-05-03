@@ -6,10 +6,12 @@ import string
 import time
 import shutil
 import concurrent.futures
+import base64
 
 # ===================== الإعدادات =====================
 APP_VERSION = "5.1_Apple_Pro_Smooth"
-BASE_URL_FILES = "http://pdd.xdt.mybluehost.me/update"
+_ENC_URL = "aHR0cHM6Ly9wZGQueGR0Lm15Ymx1ZWhvc3QubWUvdXBkYXRl"
+BASE_URL_FILES = base64.b64decode(_ENC_URL).decode('utf-8')
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
