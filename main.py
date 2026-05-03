@@ -8,12 +8,14 @@ import shutil
 import concurrent.futures
 import base64
 import urllib3
+import socket
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ===================== الإعدادات =====================
 APP_VERSION = "5.1_Apple_Pro_Smooth"
 # إرجاع الرابط إلى HTTPS لتجنب حظر Bluehost لمنفذ 80
-_ENC_URL = "aHR0cHM6Ly9wZGQueGR0Lm15Ymx1ZWhvc3QubWUvdXBkYXRl"
+# الرابط المشفر الأساسي للملازم يقرأ من مجلد update (حيث توجد ملفات alt و files.txt)
+_ENC_URL = "aHR0cDovL3BkZC54ZHQubXlibHVlaG9zdC5tZS91cGRhdGU="
 BASE_URL_FILES = base64.b64decode(_ENC_URL).decode('utf-8')
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -32,7 +34,7 @@ STAGES_ORDER = [
 
 def get_remote_size(url: str):
     try:
-        with requests.get(f"{url}?nocache={time.time()}", headers=HEADERS, stream=True, timeout=10, verify=False) as r:
+        with requests.get(f"{url}?nocache={time.time()}", headers=HEADERS, stream=True, timeout=20, verify=False) as r:
             if r.status_code == 200: return int(r.headers.get("Content-Length", -1))
     except: pass
     return -1
@@ -85,7 +87,8 @@ class BackendEngine:
         time.sleep(3)
         while True:
             try:
-                requests.head(BASE_URL_FILES, timeout=2, verify=False)
+                # فحص الإنترنت عبر خوادم عالمية سريعة لتجنب حظر سيرفرك (Bluehost) لكثرة الطلبات
+                socket.create_connection(("1.1.1.1", 53), timeout=2)
                 online = True
             except:
                 online = False
@@ -123,7 +126,7 @@ class BackendEngine:
     def fetch_data(self):
         self.is_fetching = True
         try:
-            r = requests.get(f"{BASE_URL_FILES}/files.txt?nocache={time.time()}", headers=HEADERS, timeout=10, verify=False)
+            r = requests.get(f"{BASE_URL_FILES}/files.txt?nocache={time.time()}", headers=HEADERS, timeout=30, verify=False)
             r.raise_for_status()
             r.encoding = 'utf-8'
             files = []
