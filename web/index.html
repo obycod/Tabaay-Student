@@ -312,22 +312,21 @@
             if (target && !target.disabled) playClickSound();
         });
 
-        eel.expose(setNetworkStatus);
-        function setNetworkStatus(isOnline) {
+        window.setNetworkStatus = function(isOnline) {
             networkOnline = isOnline;
             document.getElementById('offlineBanner').style.display = isOnline ? 'none' : 'block';
             checkSyncBtn();
-        }
+        };
+        eel.expose(window.setNetworkStatus, "setNetworkStatus");
 
-        function toggleTheme() {
+        window.toggleTheme = function() {
             document.body.classList.toggle('dark-mode');
             const isDark = document.body.classList.contains('dark-mode');
             document.getElementById('themeToggle').innerText = isDark ? '☀️' : '🌙';
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        }
+        };
 
-        eel.expose(buildUI);
-        function buildUI(stagesData) {
+        window.buildUI = function(stagesData) {
             const grid = document.getElementById('gridContainer');
             grid.innerHTML = '';
             stageCards = {};
@@ -350,10 +349,11 @@
                 grid.appendChild(card);
             });
             document.getElementById('loadingOverlay').style.display = 'none';
-        }
+        };
+        eel.expose(window.buildUI, "buildUI");
 
         // تفاعل النقر على البطاقة (مربوط بالنافذة المنبثقة)
-        function toggleCard(stage) {
+        window.toggleCard = function(stage) {
             if(document.getElementById('btnSync').disabled && document.getElementById('btnSync').innerText.includes("جاري")) return;
             
             let data = stageCards[stage];
@@ -368,10 +368,10 @@
             }
 
             executeToggle(stage);
-        }
+        };
 
         // إغلاق النافذة المنبثقة وتنفيذ الأمر
-        function closeConfirm(isConfirmed) {
+        window.closeConfirm = function(isConfirmed) {
             document.getElementById('confirmOverlay').style.display = 'none';
             if (isConfirmed) {
                 if (pendingConfirmAction === 'toggle_stage' && pendingStageToToggle) {
@@ -382,7 +382,7 @@
             }
             pendingStageToToggle = null;
             pendingConfirmAction = null;
-        }
+        };
 
         function executeToggle(stage) {
             stageCards[stage].selected = !stageCards[stage].selected;
@@ -390,8 +390,7 @@
             checkSyncBtn();
         }
 
-        eel.expose(updateCardState);
-        function updateCardState(stage, isSelected, missingCount, totalFiles, isOnPen) {
+        window.updateCardState = function(stage, isSelected, missingCount, totalFiles, isOnPen) {
             if(stageCards[stage]) {
                 stageCards[stage].selected = isSelected;
                 stageCards[stage].missing = missingCount;
@@ -400,7 +399,8 @@
                 updateCardUI(stage);
                 checkSyncBtn();
             }
-        }
+        };
+        eel.expose(window.updateCardState, "updateCardState");
 
         function updateCardUI(stage) {
             const card = document.getElementById(`card_${stage}`);
@@ -427,26 +427,26 @@
             }
         }
 
-        eel.expose(setCardProgressVisible);
-        function setCardProgressVisible(stage, isVisible) {
+        window.setCardProgressVisible = function(stage, isVisible) {
             const trk = document.getElementById(`trk_${stage}`);
             if(trk) {
                 trk.style.display = isVisible ? 'block' : 'none';
                 if(isVisible) document.getElementById(`fill_${stage}`).style.width = '0%';
             }
-        }
+        };
+        eel.expose(window.setCardProgressVisible, "setCardProgressVisible");
 
-        eel.expose(updateStageSize);
-        function updateStageSize(stage, sizeStr) {
+        window.updateStageSize = function(stage, sizeStr) {
             const el = document.getElementById(`size_${stage}`);
             if(el) el.innerText = sizeStr;
-        }
+        };
+        eel.expose(window.updateStageSize, "updateStageSize");
 
-        eel.expose(updateCardProgress);
-        function updateCardProgress(stage, pct) {
+        window.updateCardProgress = function(stage, pct) {
             const fill = document.getElementById(`fill_${stage}`);
             if(fill) fill.style.width = `${pct}%`;
-        }
+        };
+        eel.expose(window.updateCardProgress, "updateCardProgress");
 
         function checkSyncBtn() {
             const hasSelectionOrDeletion = Object.values(stageCards).some(c => c.selected || (!c.selected && c.on_pen));
@@ -454,8 +454,7 @@
             document.getElementById('btnSync').disabled = !(hasSelectionOrDeletion && isPenConnected && networkOnline);
         }
 
-        eel.expose(setPenStatus);
-        function setPenStatus(isConnected, storageText, pctUsed=0) {
+        window.setPenStatus = function(isConnected, storageText, pctUsed=0) {
             const pill = document.getElementById('usbPill');
             const usbText = document.getElementById('usbText');
             const btnEject = document.getElementById('btnEject');
@@ -491,16 +490,17 @@
                 });
             }
             checkSyncBtn();
-        }
+        };
+        eel.expose(window.setPenStatus, "setPenStatus");
 
-        eel.expose(updateProgress);
-        function updateProgress(pct, timeStr) {
+        window.updateProgress = function(pct, timeStr) {
             document.getElementById('progressFill').style.width = `${pct}%`;
             document.getElementById('pctLbl').innerText = `${Math.floor(pct)}%`;
             document.getElementById('timeLbl').innerText = timeStr;
-        }
+        };
+        eel.expose(window.updateProgress, "updateProgress");
 
-        function startSync() {
+        window.startSync = function() {
             const btn = document.getElementById('btnSync');
             btn.onclick = cancelSync;
             btn.innerText = "إلغاء التحديث";
@@ -510,7 +510,7 @@
             
             const selectedStages = Object.keys(stageCards).filter(s => stageCards[s].selected);
             eel.start_sync_python(selectedStages);
-        }
+        };
 
         function cancelSync() {
             pendingConfirmAction = 'cancel_sync';
@@ -525,14 +525,13 @@
             eel.cancel_sync_python();
         }
 
-        function ejectPen() {
+        window.ejectPen = function() {
             document.getElementById('btnEject').disabled = true;
             document.getElementById('btnEject').innerText = "جاري الإخراج...";
             eel.eject_pen_python();
-        }
+        };
 
-        eel.expose(syncFinished);
-        function syncFinished(msg) {
+        window.syncFinished = function(msg) {
             const btn = document.getElementById('btnSync');
             btn.innerText = msg;
             btn.onclick = startSync;
@@ -543,24 +542,25 @@
                 checkSyncBtn();
                 document.getElementById('btnEject').disabled = false;
             }, 3000);
-        }
+        };
+        eel.expose(window.syncFinished, "syncFinished");
 
-        eel.expose(ejectFinished);
-        function ejectFinished() {
+        window.ejectFinished = function() {
             document.getElementById('btnEject').innerText = "تم الإخراج بأمان";
-        }
+        };
+        eel.expose(window.ejectFinished, "ejectFinished");
 
-        eel.expose(triggerCustomAlert);
-        function triggerCustomAlert(msg) {
+        window.triggerCustomAlert = function(msg) {
             document.getElementById('alertTitle').innerText = "تم بنجاح";
             document.getElementById('alertText').innerText = msg;
             document.getElementById('alertOverlay').style.display = 'flex';
-        }
+        };
+        eel.expose(window.triggerCustomAlert, "triggerCustomAlert");
 
-        eel.expose(resetAllProgress);
-        function resetAllProgress() {
+        window.resetAllProgress = function() {
             document.querySelectorAll('.card-progress-track').forEach(t => t.style.display = 'none');
-        }
+        };
+        eel.expose(window.resetAllProgress, "resetAllProgress");
     </script>
 </body>
 </html>
