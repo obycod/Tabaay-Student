@@ -403,7 +403,7 @@ def eject_logic(drive_letter):
 
 def check_for_app_updates():
     try:
-        url = f"{BASE_URL_FILES}/student_version.txt?nocache={time.time()}"
+        url = f"https://app.altabaay.co/update/student_version.txt?nocache={time.time()}"
         r = requests.get(url, headers=HEADERS, timeout=5)
         if r.status_code == 200:
             lines = r.text.strip().splitlines()
