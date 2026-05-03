@@ -401,9 +401,25 @@ def eject_logic(drive_letter):
     time.sleep(2)
     eel.ejectFinished()()
 
+def check_for_app_updates():
+    try:
+        url = f"{BASE_URL_FILES}/student_version.txt?nocache={time.time()}"
+        r = requests.get(url, headers=HEADERS, timeout=5)
+        if r.status_code == 200:
+            lines = r.text.strip().splitlines()
+            if len(lines) >= 2:
+                latest_version = lines[0].strip()
+                download_link = lines[1].strip()
+                # إذا كان إصدار السيرفر يختلف عن إصدار البرنامج الحالي
+                if latest_version != APP_VERSION:
+                    eel.showUpdateAlert(latest_version, download_link)()
+    except:
+        pass
+
 if __name__ == '__main__':
     eel.init('web')
     engine.start_monitor()
+    threading.Thread(target=check_for_app_updates, daemon=True).start()
     
     # الحصول على أبعاد الشاشة الحقيقية لإجبار المتصفح على الفتح بحجم الشاشة بالكامل
     w, h = 1000, 700

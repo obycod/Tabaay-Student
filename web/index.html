@@ -236,6 +236,18 @@
         </div>
     </div>
 
+    <!-- النافذة المنبثقة لتحديث البرنامج نفسه -->
+    <div id="updateOverlay" class="overlay" style="display: none; z-index: 300; background: rgba(0, 0, 0, 0.6);">
+        <div class="confirm-box">
+            <h3 class="confirm-title" style="color: var(--apple-blue);">🚀 تحديث جديد متوفر!</h3>
+            <p class="confirm-text" id="updateText">...</p>
+            <div class="confirm-buttons">
+                <button class="confirm-btn cancel" onclick="document.getElementById('updateOverlay').style.display='none'">لاحقاً</button>
+                <button class="confirm-btn danger" style="color: var(--apple-blue); font-weight: 800;" id="btnDownloadUpdate">تحميل التحديث</button>
+            </div>
+        </div>
+    </div>
+
     <header class="top-nav">
         <div class="title-group">
             <h1>تحديث القلم الذكي</h1>
@@ -561,6 +573,17 @@
             document.querySelectorAll('.card-progress-track').forEach(t => t.style.display = 'none');
         };
         eel.expose(window.resetAllProgress, "resetAllProgress");
+
+        window.showUpdateAlert = function(newVersion, link) {
+            document.getElementById('updateText').innerText = `يتوفر إصدار جديد من البرنامج (${newVersion}).\nيرجى التحديث لضمان أفضل أداء واستقرار.`;
+            const btn = document.getElementById('btnDownloadUpdate');
+            btn.onclick = function() {
+                window.open(link, '_blank');
+                document.getElementById('updateOverlay').style.display = 'none';
+            };
+            document.getElementById('updateOverlay').style.display = 'flex';
+        };
+        eel.expose(window.showUpdateAlert, "showUpdateAlert");
     </script>
 </body>
 </html>

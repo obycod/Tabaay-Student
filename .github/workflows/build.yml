@@ -49,8 +49,33 @@ jobs:
       run: |
         & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup.iss
 
+    - name: تجهيز ملفات التحديث للرفع
+      run: |
+        # استخراج رقم الإصدار آلياً من ملف البايثون
+        $content = Get-Content main.py -Raw
+        if ($content -match 'APP_VERSION\s*=\s*"([^"]+)"') {
+            $version = $matches[1]
+            # الرابط المباشر للبرنامج على سيرفرك
+            $downloadLink = "https://pdd.xdt.mybluehost.me/update/Tabaay_Student_Setup.exe"
+            $outContent = "$version`n$downloadLink"
+            Set-Content -Path "Output\student_version.txt" -Value $outContent -Encoding UTF8
+            Write-Host "تم بنجاح سحب الإصدار: $version"
+        } else {
+            Write-Error "لم يتم العثور على رقم الإصدار!"
+            exit 1
+        }
+
+    - name: الرفع التلقائي إلى سيرفر Bluehost عبر FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./Output/
+        server-dir: /public_html/update/
+
     - name: رفع ملف التنصيب الجاهز
       uses: actions/upload-artifact@v4
       with:
         name: Tabaay_Student_Installer
-        path: Output/Tabaay_Student_Setup.exe
+        path: Output/
