@@ -305,6 +305,7 @@
         let pendingStageToToggle = null; // لحفظ المرحلة اللي دا ننتظر تأكيد حذفها
         let pendingConfirmAction = null; // لمعرفة نوع الإجراء المطلوب (حذف أو إلغاء تحديث)
         let networkOnline = true;
+        let isSyncing = false; // قفل لمنع النقر على المراحل أثناء التحديث
 
         if(localStorage.getItem('theme') === 'dark') {
             document.body.classList.add('dark-mode');
@@ -384,7 +385,7 @@
 
         // تفاعل النقر على البطاقة (مربوط بالنافذة المنبثقة)
         window.toggleCard = function(stage) {
-            if(document.getElementById('btnSync').disabled && document.getElementById('btnSync').innerText.includes("جاري")) return;
+            if(isSyncing || (document.getElementById('btnSync').disabled && document.getElementById('btnSync').innerText.includes("جاري"))) return;
             
             let data = stageCards[stage];
             
@@ -531,6 +532,7 @@
         eel.expose(window.updateProgress, "updateProgress");
 
         window.startSync = function() {
+            isSyncing = true;
             const btn = document.getElementById('btnSync');
             btn.onclick = cancelSync;
             btn.innerText = "إلغاء التحديث";
@@ -562,6 +564,7 @@
         };
 
         window.syncFinished = function(msg) {
+            isSyncing = false;
             const btn = document.getElementById('btnSync');
             btn.innerText = msg;
             btn.onclick = startSync;
