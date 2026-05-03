@@ -12,7 +12,7 @@ import socket
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ===================== الإعدادات =====================
-APP_VERSION = "5.4_Apple_Pro_Smooth"
+APP_VERSION = "5.5_Apple_Pro_Smooth"
 # إرجاع الرابط إلى HTTPS لتجنب حظر Bluehost لمنفذ 80
 # الرابط المشفر الأساسي للملازم يقرأ من مجلد update (حيث توجد ملفات alt و files.txt)
 _ENC_URL = "aHR0cHM6Ly9hbHRhYmFheS5jby91cGRhdGU="
@@ -493,16 +493,22 @@ if __name__ == '__main__':
     engine.start_monitor()
     threading.Thread(target=check_for_app_updates, daemon=True).start()
     
-    # الحصول على أبعاد الشاشة الحقيقية لإجبار المتصفح على الفتح بحجم الشاشة بالكامل
-    w, h = 1000, 700
+    # تحديد حجم مثالي يناسب 20 مرحلة بدون سكرول وتوسيط النافذة في الشاشة
+    w, h = 1350, 850
+    x, y = 50, 50
     try:
         import tkinter as tk
         root = tk.Tk()
-        w, h = root.winfo_screenwidth(), root.winfo_screenheight()
+        screen_w = root.winfo_screenwidth()
+        screen_h = root.winfo_screenheight()
+        w = min(w, screen_w - 40)
+        h = min(h, screen_h - 40)
+        x = (screen_w - w) // 2
+        y = (screen_h - h) // 2
         root.destroy()
     except: pass
 
     try:
-        eel.start('index.html', size=(w, h), position=(0, 0), mode='edge', cmdline_args=['--start-maximized'])
+        eel.start('index.html', size=(w, h), position=(x, y), mode='edge')
     except EnvironmentError:
-        eel.start('index.html', size=(w, h), position=(0, 0), mode='chrome', cmdline_args=['--start-maximized'])
+        eel.start('index.html', size=(w, h), position=(x, y), mode='chrome')
