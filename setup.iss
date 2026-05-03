@@ -11,7 +11,8 @@ SetupIconFile=web\icon.ico
 PrivilegesRequired=admin
 
 [Files]
-Source: "dist\Tabaay_Student.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\Tabaay_Student\Tabaay_Student.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\Tabaay_Student\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\تحديث القلم الذكي"; Filename: "{app}\Tabaay_Student.exe"

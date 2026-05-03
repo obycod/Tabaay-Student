@@ -21,11 +21,29 @@ jobs:
     - name: تثبيت المكتبات المطلوبة
       run: |
         python -m pip install --upgrade pip
-        pip install eel requests pyinstaller
+        pip install eel requests pyinstaller pyarmor
 
-    - name: تحويل البرنامج إلى EXE (بواسطة PyInstaller و Eel)
+    - name: إعداد أدوات تشويش الواجهة (Node.js)
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: تشفير الكود وتحويل البرنامج إلى EXE
       run: |
-        python -m eel main.py web --onefile --noconsole --name "Tabaay_Student" --icon=web/icon.ico
+        # 1. تشفير كود البايثون باستخدام PyArmor
+        pyarmor gen -O obf_dist main.py
+        # 2. نسخ مجلد الواجهة ومحتوياته إلى المجلد المشفر
+        Copy-Item -Path "web" -Destination "obf_dist\web" -Recurse
+        # 3. تشويش وضغط واجهة الويب (HTML/JS/CSS) لمنع سرقتها
+        npm install -g html-minifier-terser
+        html-minifier-terser --collapse-whitespace --remove-comments --minify-js true --minify-css true -o "obf_dist\web\index.html" "obf_dist\web\index.html"
+        # 4. بناء البرنامج كـ (مجلد) وليس ملف واحد لتسريع الفتح بشكل مضاعف
+        Set-Location obf_dist
+        python -m eel main.py web --onedir --noconsole --name "Tabaay_Student" --icon=web/icon.ico
+        # 5. نقل مجلد البرنامج النهائي للمسار الأصلي ليتعرف عليه Inno Setup
+        Set-Location ..
+        New-Item -ItemType Directory -Force -Path dist
+        Move-Item -Path "obf_dist\dist\Tabaay_Student" -Destination "dist\Tabaay_Student" -Force
 
     - name: تجميع ملف التنصيب (بواسطة Inno Setup)
       run: |
