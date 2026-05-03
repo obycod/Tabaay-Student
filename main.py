@@ -421,9 +421,10 @@ def eject_logic(drive_letter):
     eel.ejectFinished()()
 
 def check_for_app_updates():
-    # تأخير 3 ثواني لضمان فتح الواجهة بالكامل قبل إرسال أمر إظهار النافذة
+    # تأخير 3 ثواني لضمان فتح الواجهة بالكامل قبل فحص التحديث
     time.sleep(3)
     try:
+        # مسار فحص التحديث الخاص بالطالب
         url = f"https://app.altabaay.co/update_Student/student_version.txt?nocache={time.time()}"
         r = requests.get(url, headers=HEADERS, timeout=5, verify=False)
         if r.status_code == 200:
@@ -443,8 +444,8 @@ def start_auto_update(url):
 
 def _auto_update_logic(url):
     try:
-        # إنشاء مسار مؤقت لتحميل التحديث
-        temp_dir = os.path.join(os.getenv('TEMP', ''), "TabaayUpdate")
+        # إنشاء مسار مؤقت لتحميل تحديث الطالب
+        temp_dir = os.path.join(os.getenv('TEMP', ''), "TabaayUpdateStudent")
         os.makedirs(temp_dir, exist_ok=True)
         exe_path = os.path.join(temp_dir, "Tabaay_Student_Setup.exe")
         
@@ -453,7 +454,7 @@ def _auto_update_logic(url):
                 os.remove(exe_path)
         except: pass
 
-        # البدء بالتحميل
+        # البدء بالتحميل من السيرفر
         r = requests.get(url, stream=True, verify=False, timeout=30)
         r.raise_for_status()
         
@@ -472,15 +473,14 @@ def _auto_update_logic(url):
         eel.setUpdateStatus("جاري بدء التثبيت...")()
         time.sleep(1.5)
         
-        # الطريقة الرسمية المعتمدة من ويندوز لتشغيل التحديث كمسؤول (تظهر نافذة الموافقة Yes/No)
+        # الطريقة الرسمية لتشغيل ملف التنصيب إجبارياً وبصمت (/SILENT)
         import ctypes
         ctypes.windll.shell32.ShellExecuteW(None, "runas", exe_path, "/SILENT", None, 1)
         
-        # إغلاق واجهة المتصفح بعد إرسال أمر التشغيل للويندوز لضمان عدم إجهاض العملية
+        # إغلاق البرنامج الحالي حتى يقدر الملف الجديد يتنصب بمكانه
         try: eel.closeApp()()
         except: pass
         
-        # نعطي مجال للويندوز حتى يظهر نافذة الموافقة قبل إغلاق البرنامج الحالي
         time.sleep(3)
         os._exit(0)
         

@@ -598,7 +598,10 @@
         window.showUpdateAlert = function(newVersion, link) {
             document.getElementById('updateText').innerText = `جاري تحميل تحديث إجباري للبرنامج (${newVersion}).\nيرجى الانتظار، سيتم التحديث تلقائياً...`;
             const btn = document.getElementById('btnDownloadUpdate');
-            document.getElementById('btnCancelUpdate').style.display = 'none'; // إخفاء زر الإلغاء
+            
+            // إخفاء زر الإلغاء لجعله إجبارياً!
+            document.getElementById('btnCancelUpdate').style.display = 'none'; 
+            
             btn.innerText = "جاري التحضير...";
             btn.disabled = true;
             document.getElementById('updateOverlay').style.display = 'flex';
