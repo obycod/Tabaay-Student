@@ -577,13 +577,22 @@
         window.showUpdateAlert = function(newVersion, link) {
             document.getElementById('updateText').innerText = `يتوفر إصدار جديد من البرنامج (${newVersion}).\nيرجى التحديث لضمان أفضل أداء واستقرار.`;
             const btn = document.getElementById('btnDownloadUpdate');
+            btn.innerText = "تحديث الآن";
+            btn.disabled = false;
             btn.onclick = function() {
-                window.open(link, '_blank');
-                document.getElementById('updateOverlay').style.display = 'none';
+                btn.innerText = "جاري التحضير...";
+                btn.disabled = true;
+                eel.start_auto_update(link);
             };
             document.getElementById('updateOverlay').style.display = 'flex';
         };
         eel.expose(window.showUpdateAlert, "showUpdateAlert");
+
+        window.setUpdateStatus = function(msg) {
+            const btn = document.getElementById('btnDownloadUpdate');
+            if(btn) btn.innerText = msg;
+        };
+        eel.expose(window.setUpdateStatus, "setUpdateStatus");
     </script>
 </body>
 </html>

@@ -437,6 +437,50 @@ def check_for_app_updates():
     except:
         pass
 
+@eel.expose
+def start_auto_update(url):
+    threading.Thread(target=_auto_update_logic, args=(url,), daemon=True).start()
+
+def _auto_update_logic(url):
+    try:
+        # إنشاء مسار مؤقت لتحميل التحديث
+        temp_dir = os.path.join(os.getenv('TEMP', ''), "TabaayUpdate")
+        os.makedirs(temp_dir, exist_ok=True)
+        exe_path = os.path.join(temp_dir, "Tabaay_Student_Setup.exe")
+        
+        try:
+            if os.path.exists(exe_path):
+                os.remove(exe_path)
+        except: pass
+
+        # البدء بالتحميل
+        r = requests.get(url, stream=True, verify=False, timeout=30)
+        r.raise_for_status()
+        
+        total_size = int(r.headers.get('content-length', 0))
+        downloaded = 0
+        
+        with open(exe_path, 'wb') as f:
+            for chunk in r.iter_content(1024 * 1024):
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    if total_size > 0:
+                        pct = int((downloaded / total_size) * 100)
+                        eel.setUpdateStatus(f"جاري التحميل... {pct}%")()
+                        
+        eel.setUpdateStatus("جاري بدء التثبيت...")()
+        time.sleep(1.5)
+        
+        # تشغيل ملف التنصيب بصمت وإغلاق البرنامج الحالي فوراً
+        import subprocess
+        subprocess.Popen([exe_path, "/SILENT"])
+        os._exit(0)
+        
+    except Exception as e:
+        print("Update failed:", e)
+        eel.setUpdateStatus("فشل التحديث! حاول لاحقاً")()
+
 if __name__ == '__main__':
     eel.init('web')
     engine.start_monitor()
