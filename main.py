@@ -454,9 +454,9 @@ def _auto_update_logic(url):
                 os.remove(exe_path)
         except: pass
 
-        # البدء بالتحميل وتخطي كاش السيرفر لضمان سحب أحدث نسخة
+        # 🔴 التعديل هنا: إضافة headers=HEADERS لفك الحظر 🔴
         dl_url = f"{url}?nocache={time.time()}" if "?" not in url else f"{url}&nocache={time.time()}"
-        r = requests.get(dl_url, stream=True, verify=False, timeout=30)
+        r = requests.get(dl_url, headers=HEADERS, stream=True, verify=False, timeout=30)
         r.raise_for_status()
         
         total_size = int(r.headers.get('content-length', 0))
