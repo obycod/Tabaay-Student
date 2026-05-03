@@ -472,9 +472,14 @@ def _auto_update_logic(url):
         eel.setUpdateStatus("جاري بدء التثبيت...")()
         time.sleep(1.5)
         
-        # تشغيل ملف التنصيب بصمت وإغلاق البرنامج الحالي فوراً
-        import subprocess
-        subprocess.Popen([exe_path, "/SILENT"])
+        # إغلاق واجهة المتصفح أولاً حتى لا يظن الطالب أن البرنامج معلق
+        try: eel.closeApp()()
+        except: pass
+        time.sleep(1)
+        
+        # تشغيل التثبيت كمسؤول وبشكل منفصل تماماً عن البرنامج
+        import ctypes
+        ctypes.windll.shell32.ShellExecuteW(None, "runas", exe_path, "/SILENT", None, 1)
         os._exit(0)
         
     except Exception as e:

@@ -242,7 +242,7 @@
             <h3 class="confirm-title" style="color: var(--apple-blue);">🚀 تحديث جديد متوفر!</h3>
             <p class="confirm-text" id="updateText">...</p>
             <div class="confirm-buttons">
-                <button class="confirm-btn cancel" onclick="document.getElementById('updateOverlay').style.display='none'">لاحقاً</button>
+                    <button class="confirm-btn cancel" id="btnCancelUpdate" onclick="document.getElementById('updateOverlay').style.display='none'">لاحقاً</button>
                 <button class="confirm-btn danger" style="color: var(--apple-blue); font-weight: 800;" id="btnDownloadUpdate">تحميل التحديث</button>
             </div>
         </div>
@@ -575,16 +575,15 @@
         eel.expose(window.resetAllProgress, "resetAllProgress");
 
         window.showUpdateAlert = function(newVersion, link) {
-            document.getElementById('updateText').innerText = `يتوفر إصدار جديد من البرنامج (${newVersion}).\nيرجى التحديث لضمان أفضل أداء واستقرار.`;
+            document.getElementById('updateText').innerText = `جاري تحميل تحديث إجباري للبرنامج (${newVersion}).\nيرجى الانتظار، سيتم التحديث تلقائياً...`;
             const btn = document.getElementById('btnDownloadUpdate');
-            btn.innerText = "تحديث الآن";
-            btn.disabled = false;
-            btn.onclick = function() {
-                btn.innerText = "جاري التحضير...";
-                btn.disabled = true;
-                eel.start_auto_update(link);
-            };
+            document.getElementById('btnCancelUpdate').style.display = 'none'; // إخفاء زر الإلغاء
+            btn.innerText = "جاري التحضير...";
+            btn.disabled = true;
             document.getElementById('updateOverlay').style.display = 'flex';
+            
+            // أمر البدء بالتحميل تلقائياً بدون انتظار نقرة من الطالب
+            eel.start_auto_update(link);
         };
         eel.expose(window.showUpdateAlert, "showUpdateAlert");
 
@@ -593,6 +592,11 @@
             if(btn) btn.innerText = msg;
         };
         eel.expose(window.setUpdateStatus, "setUpdateStatus");
+
+        window.closeApp = function() {
+            window.close();
+        };
+        eel.expose(window.closeApp, "closeApp");
     </script>
 </body>
 </html>
