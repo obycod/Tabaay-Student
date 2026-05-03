@@ -12,7 +12,7 @@ import socket
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ===================== الإعدادات =====================
-APP_VERSION = "5.2_Apple_Pro_Smooth"
+APP_VERSION = "5.3_Apple_Pro_Smooth"
 # إرجاع الرابط إلى HTTPS لتجنب حظر Bluehost لمنفذ 80
 # الرابط المشفر الأساسي للملازم يقرأ من مجلد update (حيث توجد ملفات alt و files.txt)
 _ENC_URL = "aHR0cHM6Ly9hbHRhYmFheS5jby91cGRhdGU="

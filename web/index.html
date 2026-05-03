@@ -248,12 +248,30 @@
         </div>
     </div>
 
+    <!-- النافذة المنبثقة للتعليمات -->
+    <div id="instructionsOverlay" class="overlay" style="display: none; z-index: 150;">
+        <div class="confirm-box" style="width: 400px; text-align: right;">
+            <h3 class="confirm-title" style="margin-top: 20px; text-align: center;">طريقة الاستخدام</h3>
+            <div style="font-size: 15px; color: var(--text-secondary); line-height: 1.8; padding: 10px 25px 20px 25px; text-align: right; font-weight: 500;">
+                <p style="margin: 5px 0;">1️⃣ قم بتوصيل القلم الذكي بمنفذ الـ USB.</p>
+                <p style="margin: 5px 0;">2️⃣ انقر على المرحلة الدراسية التي تريد إضافتها للقلم (ستتحول للون الأخضر).</p>
+                <p style="margin: 5px 0;">3️⃣ لإزالة مرحلة موجودة مسبقاً، انقر عليها (ستتحول للون الأحمر).</p>
+                <p style="margin: 5px 0;">4️⃣ اضغط على "بدء التحديث" وانتظر حتى تكتمل العملية.</p>
+                <p style="margin: 5px 0;">5️⃣ اضغط على "إخراج القلم" قبل فصله من الحاسوب بأمان.</p>
+            </div>
+            <div class="confirm-buttons">
+                <button class="confirm-btn cancel" style="width: 100%; border-left: none; font-weight: 700;" onclick="document.getElementById('instructionsOverlay').style.display='none'">حسناً، فهمت</button>
+            </div>
+        </div>
+    </div>
+
     <header class="top-nav">
         <div class="title-group">
             <h1>تحديث القلم الذكي</h1>
             <p>حدد الصفوف والمحتوى الذي تريد مزامنته مع القلم</p>
         </div>
         <div class="status-group">
+            <button onclick="document.getElementById('instructionsOverlay').style.display='flex'" class="btn" style="background: var(--pill-bg); color: var(--text-primary); font-size: 16px; padding: 0; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">؟</button>
             <button id="themeToggle" onclick="toggleTheme()" class="btn" style="background: var(--pill-bg); color: var(--text-primary); font-size: 18px; padding: 0; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">🌙</button>
             <div class="status-pill" style="flex-direction: column; align-items: flex-start; gap: 6px; min-width: 140px;">
                 <span id="storageLbl" style="font-size: 14px;">المساحة المتوفرة: --</span>
