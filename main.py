@@ -15,7 +15,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 APP_VERSION = "5.1_Apple_Pro_Smooth"
 # إرجاع الرابط إلى HTTPS لتجنب حظر Bluehost لمنفذ 80
 # الرابط المشفر الأساسي للملازم يقرأ من مجلد update (حيث توجد ملفات alt و files.txt)
-_ENC_URL = "aHR0cDovL3BkZC54ZHQubXlibHVlaG9zdC5tZS91cGRhdGU="
+_ENC_URL = "aHR0cHM6Ly9hbHRhYmFheS5jby91cGRhdGU="
 BASE_URL_FILES = base64.b64decode(_ENC_URL).decode('utf-8')
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
