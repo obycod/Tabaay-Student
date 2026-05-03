@@ -39,7 +39,7 @@ jobs:
         html-minifier-terser --collapse-whitespace --remove-comments --minify-js true --minify-css true -o "obf_dist\web\index.html" "obf_dist\web\index.html"
         # 4. بناء البرنامج كـ (مجلد) وليس ملف واحد لتسريع الفتح بشكل مضاعف
         Set-Location obf_dist
-        python -m eel main.py web --onedir --noconsole --name "Tabaay_Student" --icon=web/icon.ico
+        python -m eel main.py web --onedir --noconsole --hidden-import requests --name "Tabaay_Student" --icon=web/icon.ico
         # 5. نقل مجلد البرنامج النهائي للمسار الأصلي ليتعرف عليه Inno Setup
         Set-Location ..
         New-Item -ItemType Directory -Force -Path dist
