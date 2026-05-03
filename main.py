@@ -472,14 +472,16 @@ def _auto_update_logic(url):
         eel.setUpdateStatus("جاري بدء التثبيت...")()
         time.sleep(1.5)
         
-        # إغلاق واجهة المتصفح أولاً حتى لا يظن الطالب أن البرنامج معلق
-        try: eel.closeApp()()
-        except: pass
-        time.sleep(1)
-        
-        # تشغيل التثبيت كمسؤول وبشكل منفصل تماماً عن البرنامج
+        # الطريقة الرسمية المعتمدة من ويندوز لتشغيل التحديث كمسؤول (تظهر نافذة الموافقة Yes/No)
         import ctypes
         ctypes.windll.shell32.ShellExecuteW(None, "runas", exe_path, "/SILENT", None, 1)
+        
+        # إغلاق واجهة المتصفح بعد إرسال أمر التشغيل للويندوز لضمان عدم إجهاض العملية
+        try: eel.closeApp()()
+        except: pass
+        
+        # نعطي مجال للويندوز حتى يظهر نافذة الموافقة قبل إغلاق البرنامج الحالي
+        time.sleep(3)
         os._exit(0)
         
     except Exception as e:
