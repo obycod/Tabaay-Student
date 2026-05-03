@@ -272,6 +272,7 @@
         </div>
         <div class="status-group">
             <button onclick="document.getElementById('instructionsOverlay').style.display='flex'" class="btn" style="background: var(--pill-bg); color: var(--text-primary); font-size: 16px; padding: 0; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">؟</button>
+            <button onclick="refreshData()" class="btn" title="تحديث البيانات" style="background: var(--pill-bg); color: var(--text-primary); font-size: 16px; padding: 0; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">🔄</button>
             <button id="themeToggle" onclick="toggleTheme()" class="btn" style="background: var(--pill-bg); color: var(--text-primary); font-size: 18px; padding: 0; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">🌙</button>
             <div class="status-pill" style="flex-direction: column; align-items: flex-start; gap: 6px; min-width: 140px;">
                 <span id="storageLbl" style="font-size: 14px;">المساحة المتوفرة: --</span>
@@ -287,6 +288,9 @@
     </header>
 
     <main id="gridContainer" class="grid-container"></main>
+
+    <!-- رقم الإصدار العائم -->
+    <div id="appVersionDisplay" style="position: fixed; bottom: 15px; left: 20px; font-size: 13px; color: var(--text-secondary); font-weight: 700; z-index: 10;">...</div>
 
     <footer class="dock-container">
         <div class="progress-wrapper">
@@ -311,6 +315,19 @@
             document.body.classList.add('dark-mode');
             document.getElementById('themeToggle').innerText = '☀️';
         }
+
+        // جلب رقم الإصدار من البايثون وعرضه
+        async function showAppVersion() {
+            let ver = await eel.get_version_python()();
+            document.getElementById('appVersionDisplay').innerText = "إصدار " + ver;
+        }
+        showAppVersion();
+
+        window.refreshData = function() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('loadingText').innerText = 'جاري فحص القلم...';
+            eel.refresh_data_python();
+        };
 
         // ==================== المؤثرات الصوتية للأزرار ====================
         let audioCtx;

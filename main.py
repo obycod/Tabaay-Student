@@ -12,7 +12,7 @@ import socket
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ===================== الإعدادات =====================
-APP_VERSION = "5.6_Apple_Pro_Smooth"
+APP_VERSION = "5.8_Apple_Pro_Smooth"
 # إرجاع الرابط إلى HTTPS لتجنب حظر Bluehost لمنفذ 80
 # الرابط المشفر الأساسي للملازم يقرأ من مجلد update (حيث توجد ملفات alt و files.txt)
 _ENC_URL = "aHR0cHM6Ly9hbHRhYmFheS5jby91cGRhdGU="
@@ -488,6 +488,10 @@ def _auto_update_logic(url):
     except Exception as e:
         print("Update failed:", e)
         eel.setUpdateStatus("فشل التحديث! حاول لاحقاً")()
+
+@eel.expose
+def get_version_python():
+    return APP_VERSION.split('_')[0]
 
 if __name__ == '__main__':
     eel.init('web')
