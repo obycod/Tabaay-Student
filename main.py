@@ -7,10 +7,13 @@ import time
 import shutil
 import concurrent.futures
 import base64
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ===================== الإعدادات =====================
 APP_VERSION = "5.1_Apple_Pro_Smooth"
-_ENC_URL = "aHR0cDovL3BkZC54ZHQubXlibHVlaG9zdC5tZS91cGRhdGU="
+# إرجاع الرابط إلى HTTPS لتجنب حظر Bluehost لمنفذ 80
+_ENC_URL = "aHR0cHM6Ly9wZGQueGR0Lm15Ymx1ZWhvc3QubWUvdXBkYXRl"
 BASE_URL_FILES = base64.b64decode(_ENC_URL).decode('utf-8')
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -29,7 +32,7 @@ STAGES_ORDER = [
 
 def get_remote_size(url: str):
     try:
-        with requests.get(f"{url}?nocache={time.time()}", headers=HEADERS, stream=True, timeout=10) as r:
+        with requests.get(f"{url}?nocache={time.time()}", headers=HEADERS, stream=True, timeout=10, verify=False) as r:
             if r.status_code == 200: return int(r.headers.get("Content-Length", -1))
     except: pass
     return -1
@@ -78,9 +81,11 @@ class BackendEngine:
         threading.Thread(target=self.monitor_loop, daemon=True).start()
 
     def monitor_loop(self):
+        # تأخير بدء المراقبة 3 ثواني حتى تكتمل الواجهة وتستقبل الأوامر
+        time.sleep(3)
         while True:
             try:
-                requests.head(BASE_URL_FILES, timeout=2)
+                requests.head(BASE_URL_FILES, timeout=2, verify=False)
                 online = True
             except:
                 online = False
@@ -118,7 +123,7 @@ class BackendEngine:
     def fetch_data(self):
         self.is_fetching = True
         try:
-            r = requests.get(f"{BASE_URL_FILES}/files.txt?nocache={time.time()}", headers=HEADERS, timeout=10)
+            r = requests.get(f"{BASE_URL_FILES}/files.txt?nocache={time.time()}", headers=HEADERS, timeout=10, verify=False)
             r.raise_for_status()
             r.encoding = 'utf-8'
             files = []
@@ -142,6 +147,9 @@ class BackendEngine:
         except Exception as e:
             print("Error fetching:", e)
             self.pen_drive = None
+            # إنهاء حالة التعليق في حال فشل الإنترنت وإرجاع الواجهة للوضع الطبيعي
+            try: eel.setPenStatus(False, "", 0)()
+            except: pass
         finally:
             self.is_fetching = False
 
@@ -286,7 +294,7 @@ def sync_logic(files, selected_stages):
                 if loc > 0: head['Range'] = f"bytes={loc}-"; mode = "ab"
                 
                 try:
-                    with session.get(url, headers=head, stream=True, timeout=15) as r:
+                    with session.get(url, headers=head, stream=True, timeout=15, verify=False) as r:
                         # كسر المحاولات فوراً في حال كان الملف محذوفاً من السيرفر لمنع تجميد البرنامج 30 ثانية لكل ملف
                         if r.status_code == 404:
                             success = False
@@ -413,8 +421,8 @@ def check_for_app_updates():
     # تأخير 3 ثواني لضمان فتح الواجهة بالكامل قبل إرسال أمر إظهار النافذة
     time.sleep(3)
     try:
-        url = f"https://app.altabaay.co/update/student_version.txt?nocache={time.time()}"
-        r = requests.get(url, headers=HEADERS, timeout=5)
+        url = f"https://app.altabaay.co/update_Student/student_version.txt?nocache={time.time()}"
+        r = requests.get(url, headers=HEADERS, timeout=5, verify=False)
         if r.status_code == 200:
             lines = r.text.strip().splitlines()
             if len(lines) >= 2:

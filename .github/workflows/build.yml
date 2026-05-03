@@ -56,7 +56,7 @@ jobs:
         if ($content -match 'APP_VERSION\s*=\s*"([^"]+)"') {
             $version = $matches[1]
             # الرابط المباشر للبرنامج على سيرفرك
-            $downloadLink = "https://app.altabaay.co/update/Tabaay_Student_Setup.exe"
+            $downloadLink = "https://app.altabaay.co/update_Student/Tabaay_Student_Setup.exe"
             $outContent = "$version`n$downloadLink"
             Set-Content -Path "Output\student_version.txt" -Value $outContent -Encoding UTF8
             Write-Host "تم بنجاح سحب الإصدار: $version"
@@ -72,7 +72,7 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./Output/
-        server-dir: /app.altabaay.co/public_html/update/
+        server-dir: /home1/pddxdtmy/app.altabaay.co/update_Student/
 
     - name: رفع ملف التنصيب الجاهز
       uses: actions/upload-artifact@v4
