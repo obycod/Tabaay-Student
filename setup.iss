@@ -7,12 +7,10 @@ OutputDir=Output
 OutputBaseFilename=Tabaay_Student_Setup
 Compression=lzma
 SolidCompression=yes
-; أضف أيقونة إذا كان لديك ملف icon.ico
 SetupIconFile=web\icon.ico
 PrivilegesRequired=admin
 
 [Files]
-; يسحب ملف الـ exe اللي راح يصنعه GitHub Actions
 Source: "dist\Tabaay_Student.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]

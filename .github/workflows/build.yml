@@ -23,11 +23,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install eel requests pyinstaller
 
-    - name: تحويل البرنامج إلى EXE
+    - name: تحويل البرنامج إلى EXE (بواسطة PyInstaller و Eel)
       run: |
-        python -m eel main.py web --onefile --noconsole --name "Tabaay_Student" --icon=icon.ico
+        python -m eel main.py web --onefile --noconsole --name "Tabaay_Student" --icon=web/icon.ico
 
-    - name: تجميع ملف التنصيب
+    - name: تجميع ملف التنصيب (بواسطة Inno Setup)
       run: |
         & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup.iss
 
