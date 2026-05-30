@@ -845,7 +845,7 @@ class ObyLibraryApp(QMainWindow):
 
     def on_sync_done(self, success, msg):
         self.is_syncing = False
-        self.btn_sync.setText("بدء التحديث المباشر للقلم")
+        self.btn_sync.setText("بدء التحديث")
         self.update_cards_state(force_auto_select=True)
         self.update_storage_info()
         
