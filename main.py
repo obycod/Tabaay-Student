@@ -8,11 +8,12 @@ import shutil
 import base64
 import urllib3
 import urllib.parse
+import winsound
 from concurrent.futures import ThreadPoolExecutor
 
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QPushButton, QProgressBar, 
-                             QGraphicsDropShadowEffect, QFrame, QGridLayout, QDialog)
+                             QGraphicsDropShadowEffect, QFrame, QGridLayout, QDialog, QGraphicsBlurEffect)
 from PyQt6.QtCore import Qt, pyqtSignal, QObject, QTimer, QRectF
 from PyQt6.QtGui import QColor, QFont, QCursor, QPainter, QPen
 
@@ -210,6 +211,11 @@ class LibraryCard(QFrame):
         self.update_ui()
 
     def mousePressEvent(self, event):
+        # حماية إضافية: منع النقر تماماً إذا كان البرنامج الرئيسي في حالة مزامنة
+        main_app = self.window()
+        if hasattr(main_app, 'is_syncing') and main_app.is_syncing:
+            return
+            
         if self.isEnabled():
             self.is_checked = not self.is_checked
             self.update_ui()
@@ -264,6 +270,7 @@ class SignalEmitter(QObject):
     sizes_ready = pyqtSignal(dict)
     progress = pyqtSignal(int, str, str, str) 
     sync_done = pyqtSignal(bool, str) 
+    net_error = pyqtSignal(bool) # إشارة التحكم بشاشة انقطاع الإنترنت العائمة
 
 # ================= نافذة تأكيد الحذف النظيفة =================
 class ConfirmDialog(QDialog):
@@ -341,6 +348,7 @@ class ObyLibraryApp(QMainWindow):
         self.emitter.sizes_ready.connect(self.on_sizes_ready)
         self.emitter.progress.connect(self.update_progress)
         self.emitter.sync_done.connect(self.on_sync_done)
+        self.emitter.net_error.connect(self.toggle_net_overlay)
 
         self.all_server_files = []
         self.file_sizes_map = {} 
@@ -404,12 +412,12 @@ class ObyLibraryApp(QMainWindow):
         main_lay.addLayout(sub_lay)
         main_lay.addSpacing(10)
 
-        grid_container = QFrame()
-        grid_container.setStyleSheet("background: transparent;")
-        self.grid = QGridLayout(grid_container)
+        self.grid_container = QFrame()
+        self.grid_container.setStyleSheet("background: transparent;")
+        self.grid = QGridLayout(self.grid_container)
         self.grid.setSpacing(20) 
         self.grid.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        main_lay.addWidget(grid_container, stretch=1)
+        main_lay.addWidget(self.grid_container, stretch=1)
 
         prog_container = QFrame()
         prog_container.setStyleSheet("background-color: transparent; border: none;")
@@ -464,6 +472,63 @@ class ObyLibraryApp(QMainWindow):
         btn_lay.addWidget(btn_eject)
         btn_lay.addWidget(self.btn_sync, stretch=1)
         main_lay.addLayout(btn_lay)
+
+        # شاشة التنبيه العائمة لقطع الاتصال بالإنترنت في منتصف البرنامج
+        self.net_overlay = QFrame(self.centralWidget())
+        self.net_overlay.setObjectName("NetOverlay")
+        self.net_overlay.setStyleSheet("""
+            QFrame#NetOverlay {
+                background-color: rgba(255, 255, 255, 245);
+                border: 2px solid #FF3B30;
+                border-radius: 20px;
+            }
+        """)
+        self.net_overlay.setFixedSize(450, 240)
+        
+        shadow_net = QGraphicsDropShadowEffect(self)
+        shadow_net.setBlurRadius(25)
+        shadow_net.setColor(QColor(0, 0, 0, 50))
+        shadow_net.setOffset(0, 6)
+        self.net_overlay.setGraphicsEffect(shadow_net)
+        
+        overlay_lay = QVBoxLayout(self.net_overlay)
+        overlay_lay.setContentsMargins(25, 25, 25, 25)
+        overlay_lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        self.lbl_net_err_title = QLabel("⚠️ انقطع الاتصال بالإنترنت")
+        self.lbl_net_err_title.setStyleSheet("font-size: 20px; font-weight: bold; color: #FF3B30; background: transparent; border: none;")
+        self.lbl_net_err_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # إضافة شريط التحميل المتذبذب (Indeterminate) للحيوية
+        self.net_loading_bar = QProgressBar()
+        self.net_loading_bar.setRange(0, 0) # نطاق صفر يجعله يتحرك يميناً ويساراً باستمرار
+        self.net_loading_bar.setFixedHeight(8)
+        self.net_loading_bar.setTextVisible(False)
+        self.net_loading_bar.setStyleSheet("""
+            QProgressBar { background-color: #FEE2E2; border-radius: 4px; border: none; }
+            QProgressBar::chunk { background-color: #FF3B30; border-radius: 4px; }
+        """)
+        
+        self.lbl_net_err_msg = QLabel("جاري محاولة إعادة الاتصال تلقائياً...\nيرجى عدم فصل القلم أو إغلاق البرنامج.")
+        self.lbl_net_err_msg.setWordWrap(True)
+        self.lbl_net_err_msg.setStyleSheet("font-size: 14px; color: #4A5568; font-weight: bold; background: transparent; border: none;")
+        self.lbl_net_err_msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        overlay_lay.addWidget(self.lbl_net_err_title)
+        overlay_lay.addSpacing(15)
+        overlay_lay.addWidget(self.net_loading_bar)
+        overlay_lay.addSpacing(15)
+        overlay_lay.addWidget(self.lbl_net_err_msg)
+
+        # --- إضافة تأثير الغبش (Blur) للخلفية ---
+        self.blur_effect = QGraphicsBlurEffect(self)
+        self.blur_effect.setBlurRadius(15) # درجة الغبش
+        self.blur_effect.setEnabled(False) # إيقافه افتراضياً
+        
+        # تطبيق التأثير على الحاوية الرئيسية للبطاقات
+        self.grid.parentWidget().setGraphicsEffect(self.blur_effect)
+
+        self.net_overlay.hide()
 
     def check_selection(self):
         if self.is_syncing: return
@@ -620,6 +685,8 @@ class ObyLibraryApp(QMainWindow):
         self.update_cards_state(force_auto_select=True)
 
     def update_cards_state(self, force_auto_select=False):
+        # قفل أمان: منع إعادة تفعيل البطاقات وتحديث حالتها إذا كانت المزامنة قيد التشغيل
+        if hasattr(self, 'is_syncing') and self.is_syncing: return 
         if not self.pen_drive or not self.all_server_files: return
         try:
             pen_files = [f.lower() for f in os.listdir(self.pen_drive) if f.lower().endswith('.alt')]
@@ -658,6 +725,36 @@ class ObyLibraryApp(QMainWindow):
             card.set_status(missing, len(s_files), size_mb)
 
         self.check_selection()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if hasattr(self, 'net_overlay') and self.net_overlay.isVisible():
+            self.center_net_overlay()
+
+    def center_net_overlay(self):
+        if hasattr(self, 'net_overlay'):
+            rect = self.centralWidget().geometry()
+            x = (rect.width() - self.net_overlay.width()) // 2
+            y = (rect.height() - self.net_overlay.height()) // 2
+            self.net_overlay.move(x, y)
+
+    def toggle_net_overlay(self, visible):
+        if visible:
+            # تشغيل صوت تنبيه ويندوز القياسي (MessageBeep)
+            try: winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+            except: pass
+            
+            # تفعيل تأثير الغبش على الحاوية
+            self.blur_effect.setEnabled(True)
+            
+            self.net_overlay.show()
+            self.net_overlay.raise_()
+            self.center_net_overlay()
+        else:
+            if hasattr(self, 'net_overlay'):
+                self.net_overlay.hide()
+            if hasattr(self, 'blur_effect'):
+                self.blur_effect.setEnabled(False)
 
     def start_sync(self):
         if not self.pen_drive: return
@@ -702,6 +799,12 @@ class ObyLibraryApp(QMainWindow):
         threading.Thread(target=self.sync_engine, args=(files,), daemon=True).start()
 
     def sync_engine(self, files):
+        try:
+            import ctypes
+            # منع الحاسبة من الدخول في وضع النوم (Sleep Mode) بقوة لضمان استمرار التحميل بالخلفية
+            ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001)
+        except: pass
+
         try:
             unique_files = {}
             for f in files:
@@ -751,52 +854,78 @@ class ObyLibraryApp(QMainWindow):
             os.makedirs(bridge_dir, exist_ok=True)
 
             for fname, dest, url, size, ex_size in q:
+                local_bridge_file = os.path.join(bridge_dir, fname + ".tmp")
+                
+                # حلقة تكرار لانهائية ذكية للتعامل مع انقطاع النت الفجائي والاستكمال التلقائي
+                while True:
+                    try:
+                        # فحص دقيق لحجم الكاش المحلي الحالي للملف المؤقت
+                        loc = os.path.getsize(local_bridge_file) if os.path.exists(local_bridge_file) else 0
+                        if size > 0 and loc >= size:
+                            self.emitter.net_error.emit(False) # <-- الحل: إخفاء التنبيه فوراً إذا كان الملف مكتملاً
+                            break # الملف مكتمل في الكاش مسبقاً، اخرج للنقل مباشرة
+                            
+                        head = HEADERS.copy()
+                        mode = "wb" if loc == 0 else "ab"
+                        
+                        if loc > 0:
+                            head['Range'] = f"bytes={loc}-"
+
+                        with requests.get(url, headers=head, stream=True, timeout=15, verify=False) as r:
+                            self.emitter.net_error.emit(False) # <-- الحل: إخفاء التنبيه بمجرد نجاح الاتصال بالسيرفر
+                            
+                            if r.status_code == 404:
+                                break 
+                            
+                            # إذا السيرفر لم يدعم Range وأعاد كود 200 بدلاً من 206، يتم التصفير والتحميل مجدداً بأمان
+                            if r.status_code == 200 and loc > 0:
+                                down_bytes -= loc
+                                loc = 0
+                                mode = "wb"
+                                
+                            real_size = size
+                            if real_size <= 0:
+                                real_size = int(r.headers.get('content-length', 0))
+                                total_bytes += real_size
+                            
+                            with open(local_bridge_file, mode) as f:
+                                for chunk in r.iter_content(2 * 1024 * 1024):
+                                    if chunk:
+                                        f.write(chunk)
+                                        loc += len(chunk)
+                                        down_bytes += len(chunk)
+                                        now = time.time()
+                                        
+                                        if now - last_u > 0.2 or loc == real_size:
+                                            elap = now - start_t
+                                            if elap > 1:
+                                                spd = (down_bytes - ex_size) / elap
+                                                speeds.append(spd)
+                                                if len(speeds) > 20: speeds.pop(0)
+                                                avg = sum(speeds) / len(speeds)
+                                                rem_t = (total_bytes - down_bytes) / avg if avg > 0 else 0
+                                            else: rem_t = 0
+                                            
+                                            pct = int((down_bytes / total_bytes) * 100) if total_bytes > 0 else 0
+                                            pct = min(100, max(0, pct))
+                                            
+                                            size_str = f"{down_bytes / (1024*1024):.1f} / {total_bytes / (1024*1024):.1f} MB"
+                                            speed_str = f"{avg / (1024*1024):.1f} MB/s" if avg > 0 else "0.0 MB/s"
+                                            
+                                            self.emitter.progress.emit(pct, self.format_time(rem_t), size_str, speed_str)
+                                            last_u = now
+                                            
+                        # إخفاء شاشة قطع الاتصال فوراً عند نجاح العملية وتخطي الخطأ
+                        self.emitter.net_error.emit(False)
+                        break # اخرج من حلقة إعادة المحاولة بنجاح وانتقل لمرحلة تثبيت الملف بالقلم
+                        
+                    except (requests.exceptions.RequestException, Exception):
+                        # رصد انقطاع الإنترنت وإظهار الشاشة العائمة في النص تلقائياً
+                        self.emitter.net_error.emit(True)
+                        time.sleep(3) # الانتظار 3 ثوانٍ قبل إعادة المحاولة تلقائياً من نفس البايت
+                        continue
+
                 try:
-                    local_bridge_file = os.path.join(bridge_dir, fname + ".tmp")
-                    head = HEADERS.copy()
-                    mode = "wb"
-                    loc = ex_size
-                    
-                    if loc > 0:
-                        head['Range'] = f"bytes={loc}-"
-                        mode = "ab"
-
-                    with requests.get(url, headers=head, stream=True, timeout=15, verify=False) as r:
-                        if r.status_code == 404:
-                            continue 
-                        
-                        real_size = size
-                        if real_size <= 0:
-                            real_size = int(r.headers.get('content-length', 0))
-                            total_bytes += real_size
-                        
-                        with open(local_bridge_file, mode) as f:
-                            for chunk in r.iter_content(2 * 1024 * 1024):
-                                if chunk:
-                                    f.write(chunk)
-                                    loc += len(chunk)
-                                    down_bytes += len(chunk)
-                                    now = time.time()
-                                    
-                                    if now - last_u > 0.2 or loc == real_size:
-                                        elap = now - start_t
-                                        if elap > 1:
-                                            spd = (down_bytes - ex_size) / elap
-                                            speeds.append(spd)
-                                            if len(speeds) > 20: speeds.pop(0)
-                                            avg = sum(speeds) / len(speeds)
-                                            rem_t = (total_bytes - down_bytes) / avg if avg > 0 else 0
-                                        else: rem_t = 0
-                                        
-                                        pct = int((down_bytes / total_bytes) * 100) if total_bytes > 0 else 0
-                                        pct = min(100, max(0, pct))
-                                        
-                                        size_str = f"{down_bytes / (1024*1024):.1f} / {total_bytes / (1024*1024):.1f} MB"
-                                        speed_str = f"{avg / (1024*1024):.1f} MB/s" if avg > 0 else "0.0 MB/s"
-                                        
-                                        self.emitter.progress.emit(pct, self.format_time(rem_t), size_str, speed_str)
-                                        last_u = now
-
                     self.emitter.progress.emit(pct, "جاري التثبيت في القلم...", size_str, "نقل داخلي")
                     
                     usb_tmp_file = dest + ".tmp"
@@ -811,12 +940,8 @@ class ObyLibraryApp(QMainWindow):
                     if os.path.exists(dest): os.remove(dest)
                     os.rename(usb_tmp_file, dest)
                     os.remove(local_bridge_file)
-                    
                 except Exception as e:
-                    print(f"Skipped {fname}: {e}")
-                    if os.path.exists(local_bridge_file):
-                        try: os.remove(local_bridge_file)
-                        except: pass
+                    print(f"Skipped {fname} on copy: {e}")
                     continue
 
             try: shutil.rmtree(bridge_dir)
@@ -827,6 +952,12 @@ class ObyLibraryApp(QMainWindow):
             
         except Exception as e:
             self.emitter.sync_done.emit(False, str(e))
+        finally:
+            try:
+                import ctypes
+                # إعادة السماح للحاسبة بالوضع الطبيعي والنوم بعد انتهاء عملية التحميل تماماً
+                ctypes.windll.kernel32.SetThreadExecutionState(0x80000000)
+            except: pass
 
     def format_time(self, seconds):
         if seconds <= 0 or seconds > 36000: return "--:--"
