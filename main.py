@@ -181,7 +181,28 @@ class LibraryCard(QFrame):
         self.lbl_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.lbl_status)
 
+        # إضافة شريط التحميل الحيوي الخاص بالبطاقة
+        self.card_loading_bar = QProgressBar()
+        self.card_loading_bar.setRange(0, 0) # لجعله متذبذباً وحيوياً
+        self.card_loading_bar.setFixedHeight(6)
+        self.card_loading_bar.setTextVisible(False)
+        self.card_loading_bar.setStyleSheet("""
+            QProgressBar { background-color: #E2E8F0; border-radius: 3px; border: none; }
+            QProgressBar::chunk { background-color: #007AFF; border-radius: 3px; }
+        """)
+        self.card_loading_bar.hide()
+        self.layout.addWidget(self.card_loading_bar)
+
         self.update_ui()
+
+    def set_syncing_state(self, is_syncing):
+        # تفعيل شريط التحميل وإخفاء النص إذا كانت البطاقة قيد التحديث
+        if is_syncing and self.is_checked:
+            self.lbl_status.hide()
+            self.card_loading_bar.show()
+        else:
+            self.card_loading_bar.hide()
+            self.lbl_status.show()
 
     def set_status(self, missing_count, total_files, stage_size_mb):
         self.total_files = total_files
@@ -190,6 +211,12 @@ class LibraryCard(QFrame):
         
         # عرض الحجم كرقم صحيح بدون أعشار (حسب طلبك)
         size_str = f"{int(stage_size_mb)} MB" if stage_size_mb > 0 else "-- MB"
+        # عرض الحجم بالجيجابايت (GB) 
+        if stage_size_mb > 0:
+            size_gb = stage_size_mb / 1024
+            size_str = f"{size_gb:.2f} GB"
+        else:
+            size_str = "-- GB"
         self.lbl_info.setText(f"الحجم: {size_str} ({total_files} ملف)")
         
         if self.total_files == 0:
@@ -272,6 +299,7 @@ class SignalEmitter(QObject):
     progress = pyqtSignal(int, str, str, str) 
     sync_done = pyqtSignal(bool, str) 
     net_error = pyqtSignal(bool) # إشارة التحكم بشاشة انقطاع الإنترنت العائمة
+    current_stage = pyqtSignal(str) # <-- إضافة هذه الإشارة لمعرفة المرحلة الحالية
 
 # ================= نافذة تأكيد الحذف النظيفة =================
 class ConfirmDialog(QDialog):
@@ -350,6 +378,7 @@ class ObyLibraryApp(QMainWindow):
         self.emitter.progress.connect(self.update_progress)
         self.emitter.sync_done.connect(self.on_sync_done)
         self.emitter.net_error.connect(self.toggle_net_overlay)
+        self.emitter.current_stage.connect(self.set_active_stage_card)
 
         self.all_server_files = []
         self.file_sizes_map = {} 
@@ -638,45 +667,46 @@ class ObyLibraryApp(QMainWindow):
             self.is_fetching = False
 
     def fetch_sizes_worker(self, files):
+        import json
         unique_acts = set(f['act'] for f in files)
         sizes_map = {}
         
-        # 1. محاولة قراءة الكاش المحلي لعرض الأحجام فوراً بدون انتظار
         cache_file = os.path.join(os.getenv('APPDATA', ''), "Tabaay_Student_Sizes.json")
         try:
             if os.path.exists(cache_file):
                 with open(cache_file, 'r', encoding='utf-8') as cf:
                     sizes_map = json.load(cf)
-                # إرسال الأحجام المخزنة للواجهة فوراً لكي لا ينتظر المستخدم
                 self.emitter.sizes_ready.emit(sizes_map)
-        except Exception as e:
-            print(f"Cache read error: {e}")
+        except Exception:
+            sizes_map = {}
 
-        # 2. دالة داخلية لجلب حجم الملف فقط إذا لم يكن موجوداً في الكاش
         def get_size(act):
-            if act in sizes_map and sizes_map[act] > 0:
-                return act, sizes_map[act] # إرجاع الحجم من الكاش مباشرة
+            try:
+                if act in sizes_map and sizes_map.get(act, 0) > 0:
+                    return act, sizes_map[act]
                 
-            url = f"{BASE_URL_FILES}/{urllib.parse.quote(act)}"
-            return act, get_remote_size(url)
-            
-        # 3. فحص الملازم باستخدام مسارات متعددة (Threads)
+                url = f"{BASE_URL_FILES}/{urllib.parse.quote(act)}"
+                return act, get_remote_size(url)
+            except Exception:
+                return act, 0
+                
         updated = False
         with ThreadPoolExecutor(max_workers=5) as executor:
             results = executor.map(get_size, unique_acts)
             for act, size in results:
-                if size > 0 and sizes_map.get(act) != size:
-                    sizes_map[act] = size
-                    updated = True
-                    
-        # 4. إذا تم اكتشاف ملازم جديدة أو تغيرت أحجامها، نحدث الكاش والواجهة
+                if size > 0:
+                    if sizes_map.get(act) != size:
+                        sizes_map[act] = size
+                        updated = True
+
         if updated:
             try:
                 with open(cache_file, 'w', encoding='utf-8') as cf:
                     json.dump(sizes_map, cf)
-            except: pass
-            # إرسال التحديث النهائي للواجهة
-            self.emitter.sizes_ready.emit(sizes_map)
+            except Exception:
+                pass
+            
+        self.emitter.sizes_ready.emit(sizes_map)
 
     def on_sizes_ready(self, sizes_map):
         self.file_sizes_map = sizes_map
@@ -782,6 +812,15 @@ class ObyLibraryApp(QMainWindow):
             if hasattr(self, 'blur_effect'):
                 self.blur_effect.setEnabled(False)
 
+    def set_active_stage_card(self, active_stage_name):
+        # تفعيل شريط التحميل فقط للبطاقة التي يتم تحميل ملزمتها حالياً
+        for c in self.stage_cards:
+            if c.is_checked and not c.isEnabled():
+                if c.stage_name == active_stage_name:
+                    c.set_syncing_state(True)
+                else:
+                    c.set_syncing_state(False)
+
     def start_sync(self):
         if not self.pen_drive: return
         
@@ -821,6 +860,10 @@ class ObyLibraryApp(QMainWindow):
         self.btn_sync.setEnabled(False)
         self.btn_sync.setText("جاري المزامنة المباشرة... يرجى عدم فصل القلم")
         for c in self.stage_cards: c.setEnabled(False)
+        for c in self.stage_cards: 
+            c.setEnabled(False)
+            c.set_syncing_state(True) # تشغيل شريط التحميل الحيوي للبطاقات المحددة
+            c.set_syncing_state(False) # إطفاء الأشرطة بالبداية (سيتم تفعيلها برمجياً كلما بدأ ملف)
         
         threading.Thread(target=self.sync_engine, args=(files,), daemon=True).start()
 
@@ -828,6 +871,7 @@ class ObyLibraryApp(QMainWindow):
         try:
             import ctypes
             # منع الحاسبة والشاشة من الدخول في وضع النوم (Sleep Mode) بقوة لضمان استمرار التحميل بالخلفية
+            # منع الحاسبة من الدخول في وضع النوم وسكون الشاشة
             ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001 | 0x00000002)
         except: pass
 
@@ -866,6 +910,8 @@ class ObyLibraryApp(QMainWindow):
                 total_bytes += added_size
                 down_bytes += ex_size
                 q.append((item['act'], dest, url, size, ex_size))
+                # تمرير اسم المرحلة مع قائمة التحميل
+                q.append((item['act'], dest, url, size, ex_size, item['stage']))
 
             if not q:
                 self.emitter.progress.emit(100, "--:--", "", "")
@@ -880,6 +926,11 @@ class ObyLibraryApp(QMainWindow):
             os.makedirs(bridge_dir, exist_ok=True)
 
             for fname, dest, url, size, ex_size in q:
+            for fname, dest, url, size, ex_size, stage_name in q:
+                self.emitter.current_stage.emit(stage_name) # إخبار الواجهة بتشغيل شريط هذه المرحلة
+                # إخبار الواجهة بتشغيل شريط التحميل الخاص بهذه المرحلة فقط
+                self.emitter.current_stage.emit(stage_name)
+                
                 local_bridge_file = os.path.join(bridge_dir, fname + ".tmp")
                 
                 # حلقة تكرار لانهائية ذكية للتعامل مع انقطاع النت الفجائي والاستكمال التلقائي
@@ -890,6 +941,8 @@ class ObyLibraryApp(QMainWindow):
                         if size > 0 and loc >= size:
                             self.emitter.net_error.emit(False) # <-- الحل: إخفاء التنبيه فوراً إذا كان الملف مكتملاً
                             break # الملف مكتمل في الكاش مسبقاً، اخرج للنقل مباشرة
+                            self.emitter.net_error.emit(False)
+                            break 
                             
                         head = HEADERS.copy()
                         mode = "wb" if loc == 0 else "ab"
@@ -899,6 +952,7 @@ class ObyLibraryApp(QMainWindow):
 
                         with requests.get(url, headers=head, stream=True, timeout=15, verify=False) as r:
                             self.emitter.net_error.emit(False) # <-- الحل: إخفاء التنبيه بمجرد نجاح الاتصال بالسيرفر
+                            self.emitter.net_error.emit(False)
                             
                             if r.status_code == 404:
                                 break 
@@ -944,11 +998,13 @@ class ObyLibraryApp(QMainWindow):
                         # إخفاء شاشة قطع الاتصال فوراً عند نجاح العملية وتخطي الخطأ
                         self.emitter.net_error.emit(False)
                         break # اخرج من حلقة إعادة المحاولة بنجاح وانتقل لمرحلة تثبيت الملف بالقلم
+                        break 
                         
                     except (requests.exceptions.RequestException, Exception):
                         # رصد انقطاع الإنترنت وإظهار الشاشة العائمة في النص تلقائياً
                         self.emitter.net_error.emit(True)
                         time.sleep(3) # الانتظار 3 ثوانٍ قبل إعادة المحاولة تلقائياً من نفس البايت
+                        time.sleep(3) 
                         continue
 
                 try:
@@ -1018,6 +1074,9 @@ class ObyLibraryApp(QMainWindow):
             self.lbl_time.setStyleSheet("color: #FF3B30; font-weight: bold; font-size: 13px; background:transparent; border:none;")
             
         for c in self.stage_cards: c.setEnabled(True)
+        for c in self.stage_cards: 
+            c.set_syncing_state(False) # إيقاف وإخفاء شريط التحميل الحيوي
+            c.setEnabled(True)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
