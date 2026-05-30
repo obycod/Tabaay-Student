@@ -14,7 +14,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QPushButton, QProgressBar, 
-                             QGraphicsDropShadowEffect, QFrame, QGridLayout, QDialog, QGraphicsBlurEffect)
+                             QGraphicsDropShadowEffect, QFrame, QGridLayout, QDialog, QGraphicsBlurEffect, 
+                             QListWidget, QListWidgetItem, QAbstractItemView)
 from PyQt6.QtCore import Qt, pyqtSignal, QObject, QTimer, QRectF
 from PyQt6.QtGui import QColor, QFont, QCursor, QPainter, QPen
 
@@ -208,16 +209,18 @@ class LibraryCard(QFrame):
         self.total_files = total_files
         self.missing_count = missing_count
         self.stage_size_mb = stage_size_mb
-        
-        # عرض الحجم كرقم صحيح بدون أعشار (حسب طلبك)
-        size_str = f"{int(stage_size_mb)} MB" if stage_size_mb > 0 else "-- MB"
-        # عرض الحجم بالجيجابايت (GB) 
-        if stage_size_mb > 0:
+
+        # التعديل الذكي لعرض المساحة: (MB للمساحات الصغيرة، و GB للمساحات الكبيرة)
+        if stage_size_mb == 0:
+            size_str = "-- MB"
+        elif stage_size_mb < 1024:
+            size_str = f"{stage_size_mb:.1f} MB"
+        else:
             size_gb = stage_size_mb / 1024
             size_str = f"{size_gb:.2f} GB"
-        else:
-            size_str = "-- GB"
-        self.lbl_info.setText(f"الحجم: {size_str} ({total_files} ملف)")
+
+        # عرض عدد الملازم بالشكل المطلوب
+        self.lbl_info.setText(f"الحجم: {size_str} \n(عدد الملازم: {total_files})")
         
         if self.total_files == 0:
             self.status = "SERVER_EMPTY"
@@ -232,6 +235,7 @@ class LibraryCard(QFrame):
         else:
             self.status = "NOT_SYNCED"
             self.setEnabled(True)
+
         self.update_ui()
 
     def set_checked(self, state):
@@ -362,6 +366,151 @@ class ConfirmDialog(QDialog):
         self.result = False
         self.reject()
 
+
+# ================= نافذة التنبيه بنجاح التحديث (التصميم الاحترافي النهائي) =================
+from PyQt6.QtWidgets import QListWidget, QListWidgetItem, QAbstractItemView
+
+class SuccessDialog(QDialog):
+    def __init__(self, parent, stages_list):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setModal(True)
+        self.resize(440, 420)
+        
+        self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+
+        try:
+            winsound.MessageBeep(winsound.MB_ICONINFORMATION) 
+        except: 
+            pass
+
+        container = QFrame(self)
+        container.setStyleSheet("""
+            QFrame#main_container {
+                background-color: #FFFFFF; 
+                border-radius: 16px; 
+                border: 1px solid #E2E8F0;
+            }
+            QLabel {
+                border: none;
+                background: transparent;
+            }
+        """)
+        container.setObjectName("main_container")
+        
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(35)
+        shadow.setColor(QColor(0, 0, 0, 45))
+        shadow.setOffset(0, 8)
+        container.setGraphicsEffect(shadow)
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(10, 10, 10, 10)
+        root.addWidget(container)
+
+        lay = QVBoxLayout(container)
+        lay.setContentsMargins(30, 25, 30, 25)
+        lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.setSpacing(12)
+
+        lbl_icon = QLabel("✓")
+        lbl_icon.setFixedSize(56, 56)
+        lbl_icon.setStyleSheet("""
+            background-color: #E6F4EA; 
+            color: #1E8E3E; 
+            font-size: 30px; 
+            font-weight: bold; 
+            border-radius: 28px;
+        """)
+        lbl_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        icon_lay = QHBoxLayout()
+        icon_lay.addWidget(lbl_icon, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        lbl_title = QLabel("اكتملت العملية بنجاح")
+        lbl_title.setStyleSheet("font-size: 22px; font-weight: bold; color: #1D1D1F;")
+        lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        lbl_msg = QLabel("تم تحديث القلم الذكي، المراحل المتوفرة حالياً:")
+        lbl_msg.setStyleSheet("font-size: 14px; color: #4A5568;")
+        lbl_msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        list_widget = QListWidget()
+        list_widget.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        list_widget.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        list_widget.setStyleSheet("""
+            QListWidget {
+                background-color: #F8FAFC; 
+                border: 1px solid #E2E8F0;
+                border-radius: 12px;
+                padding: 10px;
+                outline: none;
+            }
+            QListWidget::item {
+                color: #007AFF;
+                font-size: 14px;
+                font-weight: bold;
+                padding: 8px;
+            }
+            QScrollBar:vertical {
+                border: none;
+                background: transparent;
+                width: 6px;
+                margin: 4px;
+            }
+            QScrollBar::handle:vertical {
+                background: #CBD5E1;
+                border-radius: 3px;
+                min-height: 20px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #94A3B8;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+                background: transparent;
+            }
+        """)
+
+        if stages_list:
+            for stage in stages_list:
+                item = QListWidgetItem(f"•  {stage}")
+                item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                list_widget.addItem(item)
+        else:
+            item = QListWidgetItem("•  لا توجد مراحل مكتملة حالياً")
+            item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            item.setForeground(QColor("#94A3B8"))
+            list_widget.addItem(item)
+
+        self.btn_ok = QPushButton("موافق")
+        self.btn_ok.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_ok.setFixedHeight(44)
+        self.btn_ok.setStyleSheet("""
+            QPushButton { 
+                background-color: #1E8E3E; 
+                color: white; 
+                font-weight: bold; 
+                font-size: 15px; 
+                border-radius: 8px; 
+                border: none; 
+                margin-top: 6px;
+            } 
+            QPushButton:hover { 
+                background-color: #166E2D; 
+            }
+        """)
+        self.btn_ok.clicked.connect(self.accept)
+
+        lay.addLayout(icon_lay)
+        lay.addWidget(lbl_title)
+        lay.addWidget(lbl_msg)
+        lay.addWidget(list_widget)
+        lay.addWidget(self.btn_ok)
+        
 # ================= الواجهة والمحرك =================
 class ObyLibraryApp(QMainWindow):
     def __init__(self):
@@ -859,10 +1008,8 @@ class ObyLibraryApp(QMainWindow):
         self.is_syncing = True
         self.btn_sync.setEnabled(False)
         self.btn_sync.setText("جاري المزامنة المباشرة... يرجى عدم فصل القلم")
-        for c in self.stage_cards: c.setEnabled(False)
         for c in self.stage_cards: 
             c.setEnabled(False)
-            c.set_syncing_state(True) # تشغيل شريط التحميل الحيوي للبطاقات المحددة
             c.set_syncing_state(False) # إطفاء الأشرطة بالبداية (سيتم تفعيلها برمجياً كلما بدأ ملف)
         
         threading.Thread(target=self.sync_engine, args=(files,), daemon=True).start()
@@ -870,7 +1017,6 @@ class ObyLibraryApp(QMainWindow):
     def sync_engine(self, files):
         try:
             import ctypes
-            # منع الحاسبة والشاشة من الدخول في وضع النوم (Sleep Mode) بقوة لضمان استمرار التحميل بالخلفية
             # منع الحاسبة من الدخول في وضع النوم وسكون الشاشة
             ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001 | 0x00000002)
         except: pass
@@ -909,7 +1055,6 @@ class ObyLibraryApp(QMainWindow):
                 added_size = size if size > 0 else 0
                 total_bytes += added_size
                 down_bytes += ex_size
-                q.append((item['act'], dest, url, size, ex_size))
                 # تمرير اسم المرحلة مع قائمة التحميل
                 q.append((item['act'], dest, url, size, ex_size, item['stage']))
 
@@ -925,9 +1070,7 @@ class ObyLibraryApp(QMainWindow):
             bridge_dir = os.path.join(os.getenv('TEMP', ''), "Tabaay_Sync_Bridge")
             os.makedirs(bridge_dir, exist_ok=True)
 
-            for fname, dest, url, size, ex_size in q:
             for fname, dest, url, size, ex_size, stage_name in q:
-                self.emitter.current_stage.emit(stage_name) # إخبار الواجهة بتشغيل شريط هذه المرحلة
                 # إخبار الواجهة بتشغيل شريط التحميل الخاص بهذه المرحلة فقط
                 self.emitter.current_stage.emit(stage_name)
                 
@@ -939,8 +1082,6 @@ class ObyLibraryApp(QMainWindow):
                         # فحص دقيق لحجم الكاش المحلي الحالي للملف المؤقت
                         loc = os.path.getsize(local_bridge_file) if os.path.exists(local_bridge_file) else 0
                         if size > 0 and loc >= size:
-                            self.emitter.net_error.emit(False) # <-- الحل: إخفاء التنبيه فوراً إذا كان الملف مكتملاً
-                            break # الملف مكتمل في الكاش مسبقاً، اخرج للنقل مباشرة
                             self.emitter.net_error.emit(False)
                             break 
                             
@@ -951,7 +1092,6 @@ class ObyLibraryApp(QMainWindow):
                             head['Range'] = f"bytes={loc}-"
 
                         with requests.get(url, headers=head, stream=True, timeout=15, verify=False) as r:
-                            self.emitter.net_error.emit(False) # <-- الحل: إخفاء التنبيه بمجرد نجاح الاتصال بالسيرفر
                             self.emitter.net_error.emit(False)
                             
                             if r.status_code == 404:
@@ -995,15 +1135,11 @@ class ObyLibraryApp(QMainWindow):
                                             self.emitter.progress.emit(pct, self.format_time(rem_t), size_str, speed_str)
                                             last_u = now
                                             
-                        # إخفاء شاشة قطع الاتصال فوراً عند نجاح العملية وتخطي الخطأ
                         self.emitter.net_error.emit(False)
-                        break # اخرج من حلقة إعادة المحاولة بنجاح وانتقل لمرحلة تثبيت الملف بالقلم
                         break 
                         
                     except (requests.exceptions.RequestException, Exception):
-                        # رصد انقطاع الإنترنت وإظهار الشاشة العائمة في النص تلقائياً
                         self.emitter.net_error.emit(True)
-                        time.sleep(3) # الانتظار 3 ثوانٍ قبل إعادة المحاولة تلقائياً من نفس البايت
                         time.sleep(3) 
                         continue
 
@@ -1059,6 +1195,8 @@ class ObyLibraryApp(QMainWindow):
     def on_sync_done(self, success, msg):
         self.is_syncing = False
         self.btn_sync.setText("بدء التحديث")
+        
+        # نقوم بتحديث حالة البطاقات أولاً لضمان معرفة المراحل المكتملة
         self.update_cards_state(force_auto_select=True)
         self.update_storage_info()
         
@@ -1066,16 +1204,33 @@ class ObyLibraryApp(QMainWindow):
             self.lbl_time.setText("تم التحديث بنجاح ✔")
             self.lbl_time.setStyleSheet("color: #34C759; font-weight: bold; font-size: 14px; background:transparent; border:none;")
             self.lbl_speed.setText("")
-            self.lbl_size.setText("")
-            self.bar.setValue(100)
-            self.lbl_pct.setText("100%")
+            
+            # تصفير شريط التحميل
+            self.lbl_size.setText("0.0 / 0.0 MB") 
+            self.bar.setValue(0)
+            self.lbl_pct.setText("0%")
+
+            # 1. استخراج أسماء المراحل الموجودة فعلياً في القلم (المكتملة)
+            available_stages = [c.stage_name for c in self.stage_cards if c.status == "LOADED"]
+
+            # 2. تشغيل تأثير الغبش (Blur) على كامل نافذة البرنامج لتركيز الانتباه
+            blur = QGraphicsBlurEffect(self)
+            blur.setBlurRadius(15)
+            self.centralWidget().setGraphicsEffect(blur)
+
+            # 3. عرض شاشة النجاح الرسمية وإرسال قائمة المراحل لها
+            success_dialog = SuccessDialog(self, available_stages)
+            success_dialog.exec()
+            
+            # 4. إطفاء تأثير الغبش وإرجاع البرنامج لشكله الطبيعي بعد ضغط "موافق"
+            self.centralWidget().setGraphicsEffect(None)
+            
         else:
             self.lbl_time.setText(f"خطأ: {msg}")
             self.lbl_time.setStyleSheet("color: #FF3B30; font-weight: bold; font-size: 13px; background:transparent; border:none;")
             
-        for c in self.stage_cards: c.setEnabled(True)
         for c in self.stage_cards: 
-            c.set_syncing_state(False) # إيقاف وإخفاء شريط التحميل الحيوي
+            c.set_syncing_state(False)
             c.setEnabled(True)
 
 if __name__ == "__main__":
