@@ -16,9 +16,9 @@ from concurrent.futures import ThreadPoolExecutor
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QPushButton, QProgressBar, 
                              QGraphicsDropShadowEffect, QFrame, QGridLayout, QDialog, QGraphicsBlurEffect, 
-                             QListWidget, QListWidgetItem, QAbstractItemView, QSystemTrayIcon, QStyle, QToolButton, QMenu, QSplashScreen, QGraphicsOpacityEffect)
-from PyQt6.QtCore import Qt, pyqtSignal, QObject, QTimer, QRectF, QPropertyAnimation
-from PyQt6.QtGui import QColor, QFont, QCursor, QPainter, QPen, QAction, QPixmap, QPainterPath, QLinearGradient
+                             QListWidget, QListWidgetItem, QAbstractItemView, QSystemTrayIcon, QStyle, QToolButton, QMenu)
+from PyQt6.QtCore import Qt, pyqtSignal, QObject, QTimer, QRectF
+from PyQt6.QtGui import QColor, QFont, QCursor, QPainter, QPen, QAction
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 os.environ["QT_LOGGING_RULES"] = "qt.qpa.window=false"
@@ -333,30 +333,16 @@ class LibraryCard(QFrame):
         self.setStyleSheet(f"LibraryCard {{ background-color: {bg}; border-radius: 20px; border: 1.5px solid {border}; }}")
 
     def enterEvent(self, event):
-        super().enterEvent(event)
         if hasattr(self, 'shadow_effect'):
-            self.anim_blur = QPropertyAnimation(self.shadow_effect, b"blurRadius", self)
-            self.anim_blur.setDuration(200)
-            self.anim_blur.setEndValue(35)
-            self.anim_blur.start()
-            
-            self.anim_off = QPropertyAnimation(self.shadow_effect, b"offset", self)
-            self.anim_off.setDuration(200)
-            self.anim_off.setEndValue(QRectF(0, 8, 0, 0).topLeft())  # PyQt6 requires QPointF for offset
-            self.anim_off.start()
+            self.shadow_effect.setBlurRadius(25)
+            self.shadow_effect.setOffset(0, 8)
+        super().enterEvent(event)
 
     def leaveEvent(self, event):
-        super().leaveEvent(event)
         if hasattr(self, 'shadow_effect'):
-            self.anim_blur2 = QPropertyAnimation(self.shadow_effect, b"blurRadius", self)
-            self.anim_blur2.setDuration(200)
-            self.anim_blur2.setEndValue(15)
-            self.anim_blur2.start()
-            
-            self.anim_off2 = QPropertyAnimation(self.shadow_effect, b"offset", self)
-            self.anim_off2.setDuration(200)
-            self.anim_off2.setEndValue(QRectF(0, 4, 0, 0).topLeft())
-            self.anim_off2.start()
+            self.shadow_effect.setBlurRadius(15)
+            self.shadow_effect.setOffset(0, 4)
+        super().leaveEvent(event)
 
 # ================= إشارات النظام =================
 class SignalEmitter(QObject):
@@ -974,23 +960,6 @@ class ObyLibraryApp(QMainWindow):
         }
         
         t = themes.get(theme_name, themes["light"])
-        
-        try:
-            pixmap = self.grab()
-            self.overlay_lbl = QLabel(self)
-            self.overlay_lbl.setPixmap(pixmap)
-            self.overlay_lbl.setGeometry(self.rect())
-            self.overlay_lbl.show()
-            
-            self.fade_eff = QGraphicsOpacityEffect(self.overlay_lbl)
-            self.overlay_lbl.setGraphicsEffect(self.fade_eff)
-            self.fade_anim = QPropertyAnimation(self.fade_eff, b"opacity", self)
-            self.fade_anim.setDuration(400)
-            self.fade_anim.setStartValue(1.0)
-            self.fade_anim.setEndValue(0.0)
-            self.fade_anim.finished.connect(self.overlay_lbl.deleteLater)
-            self.fade_anim.start()
-        except: pass
         
         self.centralWidget().setStyleSheet(f"QWidget#MainBG {{ background-color: {t['bg']}; }}")
         
@@ -1647,47 +1616,10 @@ class ObyLibraryApp(QMainWindow):
             c.set_syncing_state(False)
             c.setEnabled(True)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = QApplication(sys.argv)
-    
-    if hasattr(Qt.ApplicationAttribute, 'AA_EnableHighDpiScaling'):
-        QApplication.setAttribute(Qt.ApplicationAttribute.AA_EnableHighDpiScaling, True)
-    if hasattr(Qt.ApplicationAttribute, 'AA_UseHighDpiPixmaps'):
-        QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps, True)
-
-    app.setFont(QFont("Segoe UI", 10))
-
-    splash_pix = QPixmap(600, 350)
-    splash_pix.fill(Qt.GlobalColor.transparent)
-    painter = QPainter(splash_pix)
-    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-    
-    path = QPainterPath()
-    path.addRoundedRect(10, 10, 580, 330, 25, 25)
-    
-    grad = QLinearGradient(0, 0, 600, 350)
-    grad.setColorAt(0, QColor("#FFFFFF"))
-    grad.setColorAt(1, QColor("#F1F5F9"))
-    painter.fillPath(path, grad)
-    
-    painter.setPen(QColor("#1D1D1F"))
-    font = QFont("Segoe UI", 32, QFont.Weight.Bold)
-    painter.setFont(font)
-    painter.drawText(QRectF(10, 10, 580, 330), Qt.AlignmentFlag.AlignCenter, "القلم الناطق - الذكي")
-    
-    font_sub = QFont("Segoe UI", 16)
-    painter.setPen(QColor("#4A5568"))
-    painter.setFont(font_sub)
-    painter.drawText(QRectF(10, 60, 580, 330), Qt.AlignmentFlag.AlignCenter, "جاري تحضير بيئة العمل والتأكد من الملفات...")
-    
-    painter.end()
-    
-    splash = QSplashScreen(splash_pix, Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.FramelessWindowHint)
-    splash.show()
-    app.processEvents()
-    time.sleep(1.5)
-
+    font = QFont("Segoe UI", 10)
+    app.setFont(font)
     window = ObyLibraryApp()
     window.show()
-    splash.finish(window)
     sys.exit(app.exec())
