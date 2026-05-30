@@ -1,3 +1,4 @@
+import json
 import sys
 import os
 import string
@@ -640,17 +641,42 @@ class ObyLibraryApp(QMainWindow):
         unique_acts = set(f['act'] for f in files)
         sizes_map = {}
         
+        # 1. محاولة قراءة الكاش المحلي لعرض الأحجام فوراً بدون انتظار
+        cache_file = os.path.join(os.getenv('APPDATA', ''), "Tabaay_Student_Sizes.json")
+        try:
+            if os.path.exists(cache_file):
+                with open(cache_file, 'r', encoding='utf-8') as cf:
+                    sizes_map = json.load(cf)
+                # إرسال الأحجام المخزنة للواجهة فوراً لكي لا ينتظر المستخدم
+                self.emitter.sizes_ready.emit(sizes_map)
+        except Exception as e:
+            print(f"Cache read error: {e}")
+
+        # 2. دالة داخلية لجلب حجم الملف فقط إذا لم يكن موجوداً في الكاش
         def get_size(act):
+            if act in sizes_map and sizes_map[act] > 0:
+                return act, sizes_map[act] # إرجاع الحجم من الكاش مباشرة
+                
             url = f"{BASE_URL_FILES}/{urllib.parse.quote(act)}"
             return act, get_remote_size(url)
             
+        # 3. فحص الملازم باستخدام مسارات متعددة (Threads)
+        updated = False
         with ThreadPoolExecutor(max_workers=5) as executor:
             results = executor.map(get_size, unique_acts)
             for act, size in results:
-                if size > 0:
+                if size > 0 and sizes_map.get(act) != size:
                     sizes_map[act] = size
+                    updated = True
                     
-        self.emitter.sizes_ready.emit(sizes_map)
+        # 4. إذا تم اكتشاف ملازم جديدة أو تغيرت أحجامها، نحدث الكاش والواجهة
+        if updated:
+            try:
+                with open(cache_file, 'w', encoding='utf-8') as cf:
+                    json.dump(sizes_map, cf)
+            except: pass
+            # إرسال التحديث النهائي للواجهة
+            self.emitter.sizes_ready.emit(sizes_map)
 
     def on_sizes_ready(self, sizes_map):
         self.file_sizes_map = sizes_map
@@ -801,8 +827,8 @@ class ObyLibraryApp(QMainWindow):
     def sync_engine(self, files):
         try:
             import ctypes
-            # منع الحاسبة من الدخول في وضع النوم (Sleep Mode) بقوة لضمان استمرار التحميل بالخلفية
-            ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001)
+            # منع الحاسبة والشاشة من الدخول في وضع النوم (Sleep Mode) بقوة لضمان استمرار التحميل بالخلفية
+            ctypes.windll.kernel32.SetThreadExecutionState(0x80000000 | 0x00000001 | 0x00000002)
         except: pass
 
         try:
