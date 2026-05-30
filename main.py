@@ -16,9 +16,9 @@ from concurrent.futures import ThreadPoolExecutor
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QPushButton, QProgressBar, 
                              QGraphicsDropShadowEffect, QFrame, QGridLayout, QDialog, QGraphicsBlurEffect, 
-                             QListWidget, QListWidgetItem, QAbstractItemView, QSystemTrayIcon, QStyle, QToolButton, QMenu)
-from PyQt6.QtCore import Qt, pyqtSignal, QObject, QTimer, QRectF
-from PyQt6.QtGui import QColor, QFont, QCursor, QPainter, QPen, QAction
+                             QListWidget, QListWidgetItem, QAbstractItemView, QSystemTrayIcon, QStyle, QToolButton, QMenu, QSplashScreen, QGraphicsOpacityEffect)
+from PyQt6.QtCore import Qt, pyqtSignal, QObject, QTimer, QRectF, QPropertyAnimation
+from PyQt6.QtGui import QColor, QFont, QCursor, QPainter, QPen, QAction, QPixmap, QPainterPath, QLinearGradient
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 os.environ["QT_LOGGING_RULES"] = "qt.qpa.window=false"
@@ -333,16 +333,30 @@ class LibraryCard(QFrame):
         self.setStyleSheet(f"LibraryCard {{ background-color: {bg}; border-radius: 20px; border: 1.5px solid {border}; }}")
 
     def enterEvent(self, event):
-        if hasattr(self, 'shadow_effect'):
-            self.shadow_effect.setBlurRadius(25)
-            self.shadow_effect.setOffset(0, 8)
         super().enterEvent(event)
+        if hasattr(self, 'shadow_effect'):
+            self.anim_blur = QPropertyAnimation(self.shadow_effect, b"blurRadius", self)
+            self.anim_blur.setDuration(200)
+            self.anim_blur.setEndValue(35)
+            self.anim_blur.start()
+            
+            self.anim_off = QPropertyAnimation(self.shadow_effect, b"offset", self)
+            self.anim_off.setDuration(200)
+            self.anim_off.setEndValue(QRectF(0, 8, 0, 0).topLeft())  # PyQt6 requires QPointF for offset
+            self.anim_off.start()
 
     def leaveEvent(self, event):
-        if hasattr(self, 'shadow_effect'):
-            self.shadow_effect.setBlurRadius(15)
-            self.shadow_effect.setOffset(0, 4)
         super().leaveEvent(event)
+        if hasattr(self, 'shadow_effect'):
+            self.anim_blur2 = QPropertyAnimation(self.shadow_effect, b"blurRadius", self)
+            self.anim_blur2.setDuration(200)
+            self.anim_blur2.setEndValue(15)
+            self.anim_blur2.start()
+            
+            self.anim_off2 = QPropertyAnimation(self.shadow_effect, b"offset", self)
+            self.anim_off2.setDuration(200)
+            self.anim_off2.setEndValue(QRectF(0, 4, 0, 0).topLeft())
+            self.anim_off2.start()
 
 # ================= إشارات النظام =================
 class SignalEmitter(QObject):
@@ -361,7 +375,7 @@ class ConfirmDialog(QDialog):
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setModal(True)
-        self.resize(450, 260)
+        self.setMinimumWidth(450)
         self.result = False
 
         container = QFrame(self)
@@ -378,20 +392,20 @@ class ConfirmDialog(QDialog):
         lay.setContentsMargins(25, 25, 25, 25)
 
         lbl_title = QLabel(title)
-        lbl_title.setStyleSheet("font-size: 20px; font-weight: bold; color: #1D1D1F;")
+        lbl_title.setStyleSheet("font-size: 22px; font-weight: bold; color: #1D1D1F;")
         lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        stages_text = " / ".join(stages_to_delete)
-        lbl_msg = QLabel(f"{message}\n\n[ {stages_text} ]\n\nهل ترغب بحذفها؟")
+        stages_html = "<br>".join([f"• {s}" for s in stages_to_delete])
+        lbl_msg = QLabel(f"{message}<br><br><span style='color: #FF3B30;'>{stages_html}</span><br><br>هل أنت متأكد من الاستمرار؟")
         lbl_msg.setWordWrap(True)
-        lbl_msg.setStyleSheet("font-size: 15px; color: #4A5568; font-weight: bold;")
+        lbl_msg.setStyleSheet("font-size: 16px; color: #4A5568; font-weight: bold;")
         lbl_msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         btn_lay = QHBoxLayout()
-        btn_yes = QPushButton("استمرار")
+        btn_yes = QPushButton("حذف واستمرار")
         btn_yes.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         btn_yes.setFixedHeight(45)
-        btn_yes.setStyleSheet("QPushButton { background-color: #FF3B30; color: white; font-weight: bold; font-size: 14px; border-radius: 12px; border: none; } QPushButton:hover { background-color: #E03126; }")
+        btn_yes.setStyleSheet("QPushButton { background-color: #FF3B30; color: white; font-weight: bold; font-size: 15px; border-radius: 12px; border: none; } QPushButton:hover { background-color: #E03126; }")
         btn_yes.clicked.connect(lambda: play_click_sound())
         btn_yes.clicked.connect(self.accept_action)
 
@@ -961,6 +975,23 @@ class ObyLibraryApp(QMainWindow):
         
         t = themes.get(theme_name, themes["light"])
         
+        try:
+            pixmap = self.grab()
+            self.overlay_lbl = QLabel(self)
+            self.overlay_lbl.setPixmap(pixmap)
+            self.overlay_lbl.setGeometry(self.rect())
+            self.overlay_lbl.show()
+            
+            self.fade_eff = QGraphicsOpacityEffect(self.overlay_lbl)
+            self.overlay_lbl.setGraphicsEffect(self.fade_eff)
+            self.fade_anim = QPropertyAnimation(self.fade_eff, b"opacity", self)
+            self.fade_anim.setDuration(400)
+            self.fade_anim.setStartValue(1.0)
+            self.fade_anim.setEndValue(0.0)
+            self.fade_anim.finished.connect(self.overlay_lbl.deleteLater)
+            self.fade_anim.start()
+        except: pass
+        
         self.centralWidget().setStyleSheet(f"QWidget#MainBG {{ background-color: {t['bg']}; }}")
         
         if hasattr(self, 'lbl_title'):
@@ -1049,7 +1080,6 @@ class ObyLibraryApp(QMainWindow):
         try:
             total, used, free = shutil.disk_usage(self.pen_drive)
             
-            # قراءة المساحة المتوقعة للملازم المحددة للتحميل
             predicted_bytes = 0
             selected_acts = set()
             for c in self.stage_cards:
@@ -1058,18 +1088,30 @@ class ObyLibraryApp(QMainWindow):
                     for item in s_files:
                         selected_acts.add(item['act'])
             
-            pen_files = [f.lower() for f in os.listdir(self.pen_drive) if f.lower().endswith('.alt')]
+            pen_files = []
+            if os.path.exists(self.pen_drive):
+                pen_files = [f.lower() for f in os.listdir(self.pen_drive) if f.lower().endswith('.alt')]
             
             for act in selected_acts:
                 if act.lower() not in pen_files:
                     predicted_bytes += self.file_sizes_map.get(act, 0)
             
-            used += predicted_bytes
-            if used > total: used = total
+            selected_acts_lower = {a.lower() for a in selected_acts}
+            bytes_to_free = 0
+            if os.path.exists(self.pen_drive):
+                for f in os.listdir(self.pen_drive):
+                    if f.lower().endswith('.alt') and f.lower() not in selected_acts_lower:
+                        try:
+                            bytes_to_free += os.path.getsize(os.path.join(self.pen_drive, f))
+                        except: pass
             
+            future_used = used + predicted_bytes - bytes_to_free
+            if future_used > total: future_used = total
+            if future_used < 0: future_used = 0
+
             gb_total = total / (2**30)
-            gb_free = (total - used) / (2**30)
-            pct = int((used / total) * 100)
+            gb_free = (total - future_used) / (2**30)
+            pct = int((future_used / total) * 100)
             
             self.lbl_storage_text.setText(f"المساحة المتاحة: {gb_free:.1f} GB\nالحجم الكلي: {gb_total:.1f} GB")
             self.circular_progress.setValue(pct)
@@ -1285,17 +1327,44 @@ class ObyLibraryApp(QMainWindow):
         files = [f for f in self.all_server_files if f['stage'] in sel_stages]
 
         try:
-            total_needed_bytes = sum(c.stage_size_mb for c in self.stage_cards if c.is_checked and c.isEnabled()) * 1024 * 1024
-            total, used, free = shutil.disk_usage(self.pen_drive)
-            if free < total_needed_bytes:
+            selected_acts = set()
+            for c in self.stage_cards:
+                if c.is_checked:
+                    s_files = [f for f in self.all_server_files if f['stage'] == c.stage_name]
+                    for item in s_files:
+                        selected_acts.add(item['act'])
+
+            bytes_to_download = 0
+            pen_files = []
+            if os.path.exists(self.pen_drive):
+                pen_files = [f.lower() for f in os.listdir(self.pen_drive) if f.lower().endswith('.alt')]
+
+            for act in selected_acts:
+                if act.lower() not in pen_files:
+                    bytes_to_download += self.file_sizes_map.get(act, 0)
+
+            selected_acts_lower = {a.lower() for a in selected_acts}
+            bytes_to_free = 0
+            if os.path.exists(self.pen_drive):
+                for f in os.listdir(self.pen_drive):
+                    if f.lower().endswith('.alt') and f.lower() not in selected_acts_lower:
+                        try:
+                            bytes_to_free += os.path.getsize(os.path.join(self.pen_drive, f))
+                        except: pass
+
+            total, used, current_free = shutil.disk_usage(self.pen_drive)
+            future_free = current_free + bytes_to_free
+
+            if future_free < bytes_to_download:
                 blur = QGraphicsBlurEffect(self)
                 blur.setBlurRadius(15)
                 self.centralWidget().setGraphicsEffect(blur)
 
                 msg = (
                     "مساحة القلم غير كافية لتحميل المراحل المحددة.\n\n"
-                    f"المساحة المطلوبة: {total_needed_bytes/(1024*1024*1024):.2f} GB\n"
-                    f"المساحة المتوفرة: {free/(1024*1024*1024):.2f} GB"
+                    f"المساحة المطلوبة للتحميل: {bytes_to_download/(1024**3):.2f} GB\n"
+                    f"المساحة التي ستتوفر (بعد الحذف): {future_free/(1024**3):.2f} GB\n\n"
+                    "يرجى إلغاء تحديد بعض المراحل لحذفها وتوفير مساحة أكبر."
                 )
                 err_dialog = ErrorDialog(self, "مساحة غير كافية", msg)
                 err_dialog.exec()
@@ -1327,7 +1396,7 @@ class ObyLibraryApp(QMainWindow):
         stages_to_delete = actual_stages_on_pen - set(sel_stages)
 
         if stages_to_delete:
-            dialog = ConfirmDialog(self, "تنبيه حذف المرحلة المحددة", "تنبيه: لقد ألغيت تحديد بعض المراحل المتواجدة بالقلم.", stages_to_delete)
+            dialog = ConfirmDialog(self, "تأكيد حذف المرحلة", "لقد قمت بإلغاء تحديد بعض المراحل المتواجدة بالقلم. سيتم حذفها لتوفير المساحة:", stages_to_delete)
             dialog.exec()
             if not dialog.result:
                 self.update_cards_state(force_auto_select=True)
@@ -1578,10 +1647,47 @@ class ObyLibraryApp(QMainWindow):
             c.set_syncing_state(False)
             c.setEnabled(True)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     app = QApplication(sys.argv)
-    font = QFont("Segoe UI", 10)
-    app.setFont(font)
+    
+    if hasattr(Qt.ApplicationAttribute, 'AA_EnableHighDpiScaling'):
+        QApplication.setAttribute(Qt.ApplicationAttribute.AA_EnableHighDpiScaling, True)
+    if hasattr(Qt.ApplicationAttribute, 'AA_UseHighDpiPixmaps'):
+        QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps, True)
+
+    app.setFont(QFont("Segoe UI", 10))
+
+    splash_pix = QPixmap(600, 350)
+    splash_pix.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(splash_pix)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    
+    path = QPainterPath()
+    path.addRoundedRect(10, 10, 580, 330, 25, 25)
+    
+    grad = QLinearGradient(0, 0, 600, 350)
+    grad.setColorAt(0, QColor("#FFFFFF"))
+    grad.setColorAt(1, QColor("#F1F5F9"))
+    painter.fillPath(path, grad)
+    
+    painter.setPen(QColor("#1D1D1F"))
+    font = QFont("Segoe UI", 32, QFont.Weight.Bold)
+    painter.setFont(font)
+    painter.drawText(QRectF(10, 10, 580, 330), Qt.AlignmentFlag.AlignCenter, "القلم الناطق - الذكي")
+    
+    font_sub = QFont("Segoe UI", 16)
+    painter.setPen(QColor("#4A5568"))
+    painter.setFont(font_sub)
+    painter.drawText(QRectF(10, 60, 580, 330), Qt.AlignmentFlag.AlignCenter, "جاري تحضير بيئة العمل والتأكد من الملفات...")
+    
+    painter.end()
+    
+    splash = QSplashScreen(splash_pix, Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.FramelessWindowHint)
+    splash.show()
+    app.processEvents()
+    time.sleep(1.5)
+
     window = ObyLibraryApp()
     window.show()
+    splash.finish(window)
     sys.exit(app.exec())
