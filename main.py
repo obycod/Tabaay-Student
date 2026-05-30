@@ -45,6 +45,10 @@ DISPLAY_STAGES = [
     "سادس علمي", "سادس ادبي", "سادس صناعي", "قصص ومغامرات", "مراحل عامة"
 ]
 
+def play_click_sound():
+    try: winsound.PlaySound("SystemNavigation", winsound.SND_ALIAS | winsound.SND_ASYNC)
+    except: pass
+
 def map_and_expand_stages(act, disp_text, raw_stage=None):
     """محرك توزيع المواد المشتركة للعلمي والأدبي (مأخوذ من الوكيل)"""
     cleaned = disp_text.strip()
@@ -123,7 +127,7 @@ class CircularProgress(QWidget):
         painter.setPen(QPen(QColor("#E2E8F0"), 4))
         painter.drawArc(rect, 0, 360 * 16)
         
-        color = "#10B981" if self.value < 85 else "#FF3B30"
+        color = "#007AFF" if self.value < 85 else "#FF3B30"
         painter.setPen(QPen(QColor(color), 4))
         painter.drawArc(rect, 90 * 16, int(-self.value / 100 * 360 * 16))
         
@@ -161,7 +165,7 @@ class LibraryCard(QFrame):
         self.check_box = QLabel("")
         self.check_box.setFixedSize(22, 22)
         self.check_box.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.check_box.setStyleSheet("border: 2px solid #E2E8F0; border-radius: 11px; background-color: white;")
+        self.check_box.setStyleSheet("border: 2px solid #E2E8F0; border-radius: 11px; background-color: rgba(255, 255, 255, 0.5);")
         
         check_lay.addWidget(self.check_box)
         check_lay.addStretch()
@@ -173,12 +177,12 @@ class LibraryCard(QFrame):
         self.layout.addWidget(self.lbl_title)
 
         self.lbl_info = QLabel(f"الحجم: جاري الحساب... ({total_files} ملف)")
-        self.lbl_info.setStyleSheet("font-size: 12px; color: #718096; background: transparent; border: none;")
+        self.lbl_info.setStyleSheet("font-size: 12px; color: #86868B; background: transparent; border: none;")
         self.lbl_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.lbl_info)
 
         self.lbl_status = QLabel("بانتظار الفحص...")
-        self.lbl_status.setStyleSheet("font-size: 13px; font-weight: bold; background: transparent; border: none;")
+        self.lbl_status.setStyleSheet("font-size: 13px; font-weight: bold; background: transparent; border: none; color: #86868B;")
         self.lbl_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.lbl_status)
 
@@ -243,6 +247,7 @@ class LibraryCard(QFrame):
         self.update_ui()
 
     def mousePressEvent(self, event):
+        play_click_sound()
         # حماية إضافية: منع النقر تماماً إذا كان البرنامج الرئيسي في حالة مزامنة
         main_app = self.window()
         if hasattr(main_app, 'is_syncing') and main_app.is_syncing:
@@ -259,40 +264,40 @@ class LibraryCard(QFrame):
             self.check_box.setStyleSheet("background-color: #007AFF; color: white; border-radius: 11px; font-weight: bold; font-size: 14px; border: none;")
         else:
             self.check_box.setText("")
-            self.check_box.setStyleSheet("background-color: white; border: 2px solid #E2E8F0; border-radius: 11px;")
+            self.check_box.setStyleSheet("background-color: rgba(255, 255, 255, 0.5); border: 2px solid #E2E8F0; border-radius: 11px;")
 
         if self.status == "LOADED" and not self.is_checked:
-            bg = "#FFF5F5"; border = "#FF3B30"
-            self.check_box.setStyleSheet("background-color: white; border: 2px solid #FF3B30; border-radius: 11px;") 
+            bg = "rgba(255, 245, 245, 0.8)"; border = "#FF3B30"
+            self.check_box.setStyleSheet("background-color: rgba(255,255,255,0.5); border: 2px solid #FF3B30; border-radius: 11px;") 
             self.lbl_status.setText("سوف يتم حذف المرحلة ⚠️")
             self.lbl_status.setStyleSheet("color: #FF3B30; font-weight: bold; font-size: 12px; border: none;")
         elif self.is_checked:
             if self.status == "LOADED":
-                bg = "#ECFDF5"; border = "#34C759"
+                bg = "rgba(236, 253, 245, 0.8)"; border = "#34C759"
                 self.lbl_status.setText(f"مكتملة في القلم")
-                self.lbl_status.setStyleSheet("color: #16A34A; font-weight: bold; font-size: 12px; border: none;")
+                self.lbl_status.setStyleSheet("color: #34C759; font-weight: bold; font-size: 12px; border: none;")
             elif self.status == "UPDATE":
-                bg = "#FFFBEB"; border = "#FF9500"
+                bg = "rgba(255, 251, 235, 0.8)"; border = "#FF9500"
                 self.lbl_status.setText(f"نقص ({self.missing_count}) ملزمة ⚠️")
-                self.lbl_status.setStyleSheet("color: #D97706; font-weight: bold; font-size: 12px; border: none;")
+                self.lbl_status.setStyleSheet("color: #FF9500; font-weight: bold; font-size: 12px; border: none;")
             else:
-                bg = "#F2F7FF"; border = "#007AFF"
+                bg = "rgba(242, 247, 255, 0.8)"; border = "#007AFF"
                 self.lbl_status.setText("جاهزة للتثبيت")
                 self.lbl_status.setStyleSheet("color: #007AFF; font-weight: bold; font-size: 12px; border: none;")
         else:
-            bg = "#FFFFFF"; border = "#E2E8F0"
+            bg = "rgba(255, 255, 255, 0.85)"; border = "#E2E8F0"
             if self.status == "SERVER_EMPTY":
                 self.lbl_status.setText("غير متوفرة بالسيرفر")
-                self.lbl_status.setStyleSheet("color: #A0AEC0; font-weight: bold; font-size: 12px; border: none;")
+                self.lbl_status.setStyleSheet("color: #86868B; font-weight: bold; font-size: 12px; border: none;")
             elif self.status == "LOADED":
                 self.lbl_status.setText(f"مكتملة في القلم")
-                self.lbl_status.setStyleSheet("color: #16A34A; font-weight: bold; font-size: 12px; border: none;")
+                self.lbl_status.setStyleSheet("color: #34C759; font-weight: bold; font-size: 12px; border: none;")
             elif self.status == "UPDATE":
                 self.lbl_status.setText(f"نقص ({self.missing_count}) ملزمة ⚠️")
-                self.lbl_status.setStyleSheet("color: #D97706; font-weight: bold; font-size: 12px; border: none;")
+                self.lbl_status.setStyleSheet("color: #FF9500; font-weight: bold; font-size: 12px; border: none;")
             else:
                 self.lbl_status.setText("جاهزة للتثبيت")
-                self.lbl_status.setStyleSheet("color: #4B5563; font-weight: bold; font-size: 12px; border: none;")
+                self.lbl_status.setStyleSheet("color: #4A5568; font-weight: bold; font-size: 12px; border: none;")
 
         self.setStyleSheet(f"LibraryCard {{ background-color: {bg}; border-radius: 20px; border: 1.5px solid {border}; }}")
 
@@ -316,7 +321,7 @@ class ConfirmDialog(QDialog):
         self.result = False
 
         container = QFrame(self)
-        container.setStyleSheet("background-color: #FFFFFF; border-radius: 20px;")
+        container.setStyleSheet("background-color: rgba(255, 255, 255, 0.95); border-radius: 20px;")
         shadow = QGraphicsDropShadowEffect(self)
         shadow.setBlurRadius(20); shadow.setColor(QColor(0,0,0,40)); shadow.setOffset(0,4)
         container.setGraphicsEffect(shadow)
@@ -333,22 +338,24 @@ class ConfirmDialog(QDialog):
         lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         stages_text = " / ".join(stages_to_delete)
-        lbl_msg = QLabel(f"{message}\n\n[ {stages_text} ]")
+        lbl_msg = QLabel(f"{message}\n\n[ {stages_text} ]\n\nهل ترغب بحذفها؟")
         lbl_msg.setWordWrap(True)
         lbl_msg.setStyleSheet("font-size: 15px; color: #4A5568; font-weight: bold;")
         lbl_msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         btn_lay = QHBoxLayout()
-        btn_yes = QPushButton("نعم، احذفها لتوفير المساحة")
+        btn_yes = QPushButton("استمرار")
         btn_yes.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         btn_yes.setFixedHeight(45)
         btn_yes.setStyleSheet("QPushButton { background-color: #FF3B30; color: white; font-weight: bold; font-size: 14px; border-radius: 12px; border: none; } QPushButton:hover { background-color: #E03126; }")
+        btn_yes.clicked.connect(lambda: play_click_sound())
         btn_yes.clicked.connect(self.accept_action)
 
-        btn_no = QPushButton("إلغاء المزامنة ✖")
+        btn_no = QPushButton("تراجع")
         btn_no.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         btn_no.setFixedHeight(45)
-        btn_no.setStyleSheet("QPushButton { background-color: #F5F5F7; color: #1D1D1F; font-weight: bold; font-size: 14px; border-radius: 12px; border: none; } QPushButton:hover { background-color: #E5E5EA; }")
+        btn_no.setStyleSheet("QPushButton { background-color: rgba(0,0,0,0.05); color: #1D1D1F; font-weight: bold; font-size: 14px; border-radius: 12px; border: none; } QPushButton:hover { background-color: rgba(0,0,0,0.1); }")
+        btn_no.clicked.connect(lambda: play_click_sound())
         btn_no.clicked.connect(self.reject_action)
 
         btn_lay.addWidget(btn_no)
@@ -388,9 +395,9 @@ class SuccessDialog(QDialog):
         container = QFrame(self)
         container.setStyleSheet("""
             QFrame#main_container {
-                background-color: #FFFFFF; 
+                background-color: rgba(255, 255, 255, 0.95); 
                 border-radius: 16px; 
-                border: 1px solid #E2E8F0;
+                border: 1px solid rgba(0,0,0,0.1);
             }
             QLabel {
                 border: none;
@@ -418,7 +425,7 @@ class SuccessDialog(QDialog):
         lbl_icon.setFixedSize(56, 56)
         lbl_icon.setStyleSheet("""
             background-color: #E6F4EA; 
-            color: #1E8E3E; 
+            color: #34C759; 
             font-size: 30px; 
             font-weight: bold; 
             border-radius: 28px;
@@ -441,8 +448,8 @@ class SuccessDialog(QDialog):
         list_widget.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         list_widget.setStyleSheet("""
             QListWidget {
-                background-color: #F8FAFC; 
-                border: 1px solid #E2E8F0;
+                background-color: rgba(248, 250, 252, 0.5); 
+                border: 1px solid rgba(0,0,0,0.05);
                 border-radius: 12px;
                 padding: 10px;
                 outline: none;
@@ -491,7 +498,7 @@ class SuccessDialog(QDialog):
         self.btn_ok.setFixedHeight(44)
         self.btn_ok.setStyleSheet("""
             QPushButton { 
-                background-color: #1E8E3E; 
+                background-color: #34C759; 
                 color: white; 
                 font-weight: bold; 
                 font-size: 15px; 
@@ -500,9 +507,10 @@ class SuccessDialog(QDialog):
                 margin-top: 6px;
             } 
             QPushButton:hover { 
-                background-color: #166E2D; 
+                background-color: #2EAB4E; 
             }
         """)
+        self.btn_ok.clicked.connect(lambda: play_click_sound())
         self.btn_ok.clicked.connect(self.accept)
 
         lay.addLayout(icon_lay)
@@ -561,7 +569,7 @@ class ObyLibraryApp(QMainWindow):
         self.pill_status = QLabel("بانتظار القلم...")
         self.pill_status.setFixedSize(140, 35)
         self.pill_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.pill_status.setStyleSheet("background-color: #FFF5F5; color: #FF3B30; border-radius: 17px; font-weight: bold; border: 1.5px solid #FF3B30;")
+        self.pill_status.setStyleSheet("background-color: rgba(255, 59, 48, 0.1); color: #FF3B30; border-radius: 17px; font-weight: bold; border: 1.5px solid rgba(255, 59, 48, 0.3);")
 
         header_lay.addWidget(title)
         header_lay.addStretch()
@@ -585,9 +593,12 @@ class ObyLibraryApp(QMainWindow):
         main_lay.addWidget(self.header_frame)
 
         subtitle = QLabel("تحديد المراحل المطلوبة (يفضل حذف المراحل الغير مطلوبة)")
-        subtitle.setStyleSheet("background-color: #FFF5F5; color: #FF3B30; font-weight: bold; font-size: 15px; padding: 12px 30px; border-radius: 15px;")
+        subtitle.setStyleSheet("background-color: rgba(255, 59, 48, 0.1); color: #FF3B30; font-weight: bold; font-size: 15px; padding: 12px 30px; border-radius: 15px;")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        sub_lay = QHBoxLayout(); sub_lay.addWidget(subtitle, alignment=Qt.AlignmentFlag.AlignCenter)
+        sub_lay = QHBoxLayout()
+        sub_lay.addStretch()
+        sub_lay.addWidget(subtitle, alignment=Qt.AlignmentFlag.AlignCenter)
+        sub_lay.addStretch()
         main_lay.addLayout(sub_lay)
         main_lay.addSpacing(10)
 
@@ -616,7 +627,7 @@ class ObyLibraryApp(QMainWindow):
         self.lbl_pct = QLabel("0%")
         self.lbl_size = QLabel("0.0 / 0.0 MB")
         self.lbl_speed = QLabel("السرعة: 0.0 MB/s")
-        self.lbl_time = QLabel("الوقت المتبقي: --:--")
+        self.lbl_time = QLabel("الوقت المتبقي: --:--:--")
         
         label_style = "font-weight: bold; font-size: 13px; color: #4A5568; background: transparent; border: none;"
         for lbl in [self.lbl_time, self.lbl_speed, self.lbl_size]:
@@ -638,14 +649,16 @@ class ObyLibraryApp(QMainWindow):
         btn_lay = QHBoxLayout()
         btn_eject = QPushButton("⏏ إخراج القلم بأمان")
         btn_eject.setFixedSize(180, 50)
-        btn_eject.setStyleSheet("QPushButton { background: white; border: 1.5px solid #E2E8F0; color: #1D1D1F; font-weight: bold; border-radius: 14px; font-size: 14px; } QPushButton:hover { background-color: #F7FAFC; }")
+        btn_eject.setStyleSheet("QPushButton { background: rgba(255,255,255,0.8); border: 1.5px solid #E2E8F0; color: #1D1D1F; font-weight: bold; border-radius: 14px; font-size: 14px; } QPushButton:hover { background-color: #FFFFFF; }")
         btn_eject.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        btn_eject.clicked.connect(lambda: play_click_sound())
         btn_eject.clicked.connect(self.eject_pen)
 
-        self.btn_sync = QPushButton("بدء التحديث المباشر للقلم")
+        self.btn_sync = QPushButton("بدء تحديث القلم")
         self.btn_sync.setFixedHeight(50)
-        self.btn_sync.setStyleSheet("QPushButton { background: #007AFF; color: white; font-weight: bold; font-size: 16px; border-radius: 14px; border: none; } QPushButton:disabled { background: #CBD5E1; color: #718096; } QPushButton:hover { background-color: #0062CC; }")
+        self.btn_sync.setStyleSheet("QPushButton { background: #007AFF; color: white; font-weight: bold; font-size: 16px; border-radius: 14px; border: none; } QPushButton:disabled { background: #CBD5E1; color: #F7FAFC; } QPushButton:hover { background-color: #0056B3; }")
         self.btn_sync.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_sync.clicked.connect(lambda: play_click_sound())
         self.btn_sync.clicked.connect(self.start_sync)
 
         btn_lay.addWidget(btn_eject)
@@ -657,7 +670,7 @@ class ObyLibraryApp(QMainWindow):
         self.net_overlay.setObjectName("NetOverlay")
         self.net_overlay.setStyleSheet("""
             QFrame#NetOverlay {
-                background-color: rgba(255, 255, 255, 245);
+                background-color: rgba(255, 255, 255, 0.85);
                 border: 2px solid #FF3B30;
                 border-radius: 20px;
             }
@@ -729,7 +742,7 @@ class ObyLibraryApp(QMainWindow):
             if self.pen_drive != ebook_dir:
                 self.pen_drive = ebook_dir
                 self.pill_status.setText("● القلم متصل")
-                self.pill_status.setStyleSheet("background-color: #ECFDF5; color: #10B981; border-radius: 17px; font-weight: bold; border: 1.5px solid #10B981;")
+                self.pill_status.setStyleSheet("background-color: rgba(52, 199, 89, 0.1); color: #34C759; border-radius: 17px; font-weight: bold; border: 1.5px solid rgba(52, 199, 89, 0.3);")
                 self.update_storage_info()
                 self.update_cards_state(force_auto_select=True)
             else:
@@ -738,7 +751,7 @@ class ObyLibraryApp(QMainWindow):
             if self.pen_drive is not None:
                 self.pen_drive = None
                 self.pill_status.setText("القلم غير متصل ○")
-                self.pill_status.setStyleSheet("background-color: #FFF5F5; color: #FF3B30; border-radius: 17px; font-weight: bold; border: 1.5px solid #FF3B30;")
+                self.pill_status.setStyleSheet("background-color: rgba(255, 59, 48, 0.1); color: #FF3B30; border-radius: 17px; font-weight: bold; border: 1.5px solid rgba(255, 59, 48, 0.3);")
                 self.lbl_storage_text.setText("المساحة المتوفرة: --\nالإجمالي: --")
                 self.circular_progress.setValue(0)
                 for c in self.stage_cards:
@@ -782,7 +795,7 @@ class ObyLibraryApp(QMainWindow):
     def eject_pen(self):
         if self.pen_drive:
             self.pill_status.setText("يمكنك سحب القلم آلياً")
-            self.pill_status.setStyleSheet("background-color: #FFFBEB; color: #FF9500; border-radius: 17px; font-weight: bold; border: 1.5px solid #FF9500;")
+            self.pill_status.setStyleSheet("background-color: rgba(255, 149, 0, 0.1); color: #FF9500; border-radius: 17px; font-weight: bold; border: 1.5px solid rgba(255, 149, 0, 0.3);")
 
     def fetch_manifest(self):
         if self.is_fetching: return
@@ -870,7 +883,6 @@ class ObyLibraryApp(QMainWindow):
             if widget: widget.setParent(None)
         self.stage_cards.clear()
 
-        row, col = 0, 0
         for s in DISPLAY_STAGES:
             s_files = [f for f in files if f['stage'] == s]
             count = len(s_files)
@@ -880,14 +892,27 @@ class ObyLibraryApp(QMainWindow):
             card = LibraryCard(s, count)
             card.state_changed.connect(self.check_selection)
             self.stage_cards.append(card)
+
+        self.rearrange_grid()
+        self.update_cards_state(force_auto_select=True)
+
+    def rearrange_grid(self):
+        if not hasattr(self, 'stage_cards') or not self.stage_cards: return
+        
+        for i in reversed(range(self.grid.count())):
+            self.grid.takeAt(i)
+
+        width = self.grid_container.width()
+        card_width = self.stage_cards[0].width() + 20
+        cols = max(1, width // card_width)
+        
+        row, col = 0, 0
+        for card in self.stage_cards:
             self.grid.addWidget(card, row, col)
-            
             col += 1
-            if col > 3:
+            if col >= cols:
                 col = 0
                 row += 1
-
-        self.update_cards_state(force_auto_select=True)
 
     def update_cards_state(self, force_auto_select=False):
         # قفل أمان: منع إعادة تفعيل البطاقات وتحديث حالتها إذا كانت المزامنة قيد التشغيل
@@ -933,6 +958,7 @@ class ObyLibraryApp(QMainWindow):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        self.rearrange_grid()
         if hasattr(self, 'net_overlay') and self.net_overlay.isVisible():
             self.center_net_overlay()
 
@@ -999,7 +1025,7 @@ class ObyLibraryApp(QMainWindow):
         stages_to_delete = actual_stages_on_pen - set(sel_stages)
 
         if stages_to_delete:
-            dialog = ConfirmDialog(self, "تنبيه تنظيف الذاكرة وتوفير المساحة", "لقد ألغيت تحديد بعض المراحل المتواجدة بالقلم، سيقوم البرنامج بمسحها لتفريغ مساحة للملازم الجديدة:", stages_to_delete)
+            dialog = ConfirmDialog(self, "تنبيه حذف المرحلة المحددة", "تنبيه: لقد ألغيت تحديد بعض المراحل المتواجدة بالقلم.", stages_to_delete)
             dialog.exec()
             if not dialog.result:
                 self.update_cards_state(force_auto_select=True)
@@ -1067,20 +1093,15 @@ class ObyLibraryApp(QMainWindow):
             speeds = []
             last_u = time.time()
 
-            bridge_dir = os.path.join(os.getenv('TEMP', ''), "Tabaay_Sync_Bridge")
-            os.makedirs(bridge_dir, exist_ok=True)
-
             for fname, dest, url, size, ex_size, stage_name in q:
-                # إخبار الواجهة بتشغيل شريط التحميل الخاص بهذه المرحلة فقط
                 self.emitter.current_stage.emit(stage_name)
                 
-                local_bridge_file = os.path.join(bridge_dir, fname + ".tmp")
+                # التحميل المباشر إلى مسار القلم بدل الـ Temp
+                usb_tmp_file = dest + ".tmp"
                 
-                # حلقة تكرار لانهائية ذكية للتعامل مع انقطاع النت الفجائي والاستكمال التلقائي
                 while True:
                     try:
-                        # فحص دقيق لحجم الكاش المحلي الحالي للملف المؤقت
-                        loc = os.path.getsize(local_bridge_file) if os.path.exists(local_bridge_file) else 0
+                        loc = os.path.getsize(usb_tmp_file) if os.path.exists(usb_tmp_file) else 0
                         if size > 0 and loc >= size:
                             self.emitter.net_error.emit(False)
                             break 
@@ -1097,7 +1118,6 @@ class ObyLibraryApp(QMainWindow):
                             if r.status_code == 404:
                                 break 
                             
-                            # إذا السيرفر لم يدعم Range وأعاد كود 200 بدلاً من 206، يتم التصفير والتحميل مجدداً بأمان
                             if r.status_code == 200 and loc > 0:
                                 down_bytes -= loc
                                 loc = 0
@@ -1108,7 +1128,7 @@ class ObyLibraryApp(QMainWindow):
                                 real_size = int(r.headers.get('content-length', 0))
                                 total_bytes += real_size
                             
-                            with open(local_bridge_file, mode) as f:
+                            with open(usb_tmp_file, mode) as f:
                                 for chunk in r.iter_content(2 * 1024 * 1024):
                                     if chunk:
                                         f.write(chunk)
@@ -1129,7 +1149,13 @@ class ObyLibraryApp(QMainWindow):
                                             pct = int((down_bytes / total_bytes) * 100) if total_bytes > 0 else 0
                                             pct = min(100, max(0, pct))
                                             
-                                            size_str = f"{down_bytes / (1024*1024):.1f} / {total_bytes / (1024*1024):.1f} MB"
+                                            down_mb = down_bytes / (1024*1024)
+                                            total_mb = total_bytes / (1024*1024)
+                                            if total_mb >= 1024:
+                                                size_str = f"{down_mb / 1024:.2f} / {total_mb / 1024:.2f} GB"
+                                            else:
+                                                size_str = f"{down_mb:.1f} / {total_mb:.1f} MB"
+                                            
                                             speed_str = f"{avg / (1024*1024):.1f} MB/s" if avg > 0 else "0.0 MB/s"
                                             
                                             self.emitter.progress.emit(pct, self.format_time(rem_t), size_str, speed_str)
@@ -1144,26 +1170,11 @@ class ObyLibraryApp(QMainWindow):
                         continue
 
                 try:
-                    self.emitter.progress.emit(pct, "جاري التثبيت في القلم...", size_str, "نقل داخلي")
-                    
-                    usb_tmp_file = dest + ".tmp"
-                    with open(local_bridge_file, "rb") as src, open(usb_tmp_file, "wb") as dst:
-                        while True:
-                            chunk = src.read(4 * 1024 * 1024)
-                            if not chunk: break
-                            if not self.pen_drive or not os.path.exists(self.pen_drive):
-                                raise Exception("تم سحب القلم من الحاسبة!")
-                            dst.write(chunk)
-
                     if os.path.exists(dest): os.remove(dest)
                     os.rename(usb_tmp_file, dest)
-                    os.remove(local_bridge_file)
                 except Exception as e:
                     print(f"Skipped {fname} on copy: {e}")
                     continue
-
-            try: shutil.rmtree(bridge_dir)
-            except: pass
 
             self.emitter.progress.emit(100, "--:--", "", "")
             self.emitter.sync_done.emit(True, "اكتمل التحديث بنجاح!")
@@ -1178,9 +1189,12 @@ class ObyLibraryApp(QMainWindow):
             except: pass
 
     def format_time(self, seconds):
-        if seconds <= 0 or seconds > 36000: return "--:--"
-        mins, secs = divmod(int(seconds), 60)
-        return f"{mins:02d}:{secs:02d}"
+        if seconds <= 0 or seconds > 36000: return "--:--:--"
+        hours, remainder = divmod(int(seconds), 3600)
+        mins, secs = divmod(remainder, 60)
+        if hours > 0:
+            return f"{hours:02d}:{mins:02d}:{secs:02d}"
+        return f"00:{mins:02d}:{secs:02d}"
 
     def update_progress(self, pct, time_str, size_str, speed_str):
         self.lbl_time.setText(f"الوقت المتبقي: {time_str}")
@@ -1194,21 +1208,23 @@ class ObyLibraryApp(QMainWindow):
 
     def on_sync_done(self, success, msg):
         self.is_syncing = False
-        self.btn_sync.setText("بدء التحديث")
+        self.btn_sync.setText("بدء تحديث القلم")
         
         # نقوم بتحديث حالة البطاقات أولاً لضمان معرفة المراحل المكتملة
         self.update_cards_state(force_auto_select=True)
         self.update_storage_info()
         
         if success:
+            # تصفير شريط التحميل فوراً
             self.lbl_time.setText("تم التحديث بنجاح ✔")
             self.lbl_time.setStyleSheet("color: #34C759; font-weight: bold; font-size: 14px; background:transparent; border:none;")
             self.lbl_speed.setText("")
-            
-            # تصفير شريط التحميل
             self.lbl_size.setText("0.0 / 0.0 MB") 
             self.bar.setValue(0)
             self.lbl_pct.setText("0%")
+
+            # إجبار الواجهة على تحديث نفسها قبل فتح نافذة النجاح
+            QApplication.processEvents()
 
             # 1. استخراج أسماء المراحل الموجودة فعلياً في القلم (المكتملة)
             available_stages = [c.stage_name for c in self.stage_cards if c.status == "LOADED"]
