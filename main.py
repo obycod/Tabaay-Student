@@ -10,14 +10,15 @@ import base64
 import urllib3
 import urllib.parse
 import winsound
+import webbrowser
 from concurrent.futures import ThreadPoolExecutor
 
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QPushButton, QProgressBar, 
                              QGraphicsDropShadowEffect, QFrame, QGridLayout, QDialog, QGraphicsBlurEffect, 
-                             QListWidget, QListWidgetItem, QAbstractItemView)
+                             QListWidget, QListWidgetItem, QAbstractItemView, QSystemTrayIcon, QStyle, QToolButton, QMenu)
 from PyQt6.QtCore import Qt, pyqtSignal, QObject, QTimer, QRectF
-from PyQt6.QtGui import QColor, QFont, QCursor, QPainter, QPen
+from PyQt6.QtGui import QColor, QFont, QCursor, QPainter, QPen, QAction
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 os.environ["QT_LOGGING_RULES"] = "qt.qpa.window=false"
@@ -28,7 +29,7 @@ try:
 except: pass
 
 # ===================== إعدادات السيرفر =====================
-APP_VERSION = 5.8
+APP_VERSION = "5.8"
 BASE_URL_FILES = "http://pdd.xdt.mybluehost.me/update"
 
 HEADERS = {
@@ -46,7 +47,11 @@ DISPLAY_STAGES = [
 ]
 
 def play_click_sound():
-    try: winsound.PlaySound("SystemNavigation", winsound.SND_ALIAS | winsound.SND_ASYNC)
+    try: winsound.PlaySound("SystemDefault", winsound.SND_ALIAS | winsound.SND_ASYNC)
+    except: pass
+
+def play_action_sound():
+    try: winsound.PlaySound("MenuPopup", winsound.SND_ALIAS | winsound.SND_ASYNC)
     except: pass
 
 def map_and_expand_stages(act, disp_text, raw_stage=None):
@@ -114,6 +119,8 @@ class CircularProgress(QWidget):
         super().__init__(parent)
         self.setFixedSize(50, 50)
         self.value = 0
+        self.bg_color = "#E2E8F0"
+        self.text_color = "#1D1D1F"
 
     def setValue(self, val):
         self.value = val
@@ -124,14 +131,14 @@ class CircularProgress(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         rect = QRectF(5, 5, self.width()-10, self.height()-10)
         
-        painter.setPen(QPen(QColor("#E2E8F0"), 4))
+        painter.setPen(QPen(QColor(self.bg_color), 4))
         painter.drawArc(rect, 0, 360 * 16)
         
         color = "#007AFF" if self.value < 85 else "#FF3B30"
         painter.setPen(QPen(QColor(color), 4))
         painter.drawArc(rect, 90 * 16, int(-self.value / 100 * 360 * 16))
         
-        painter.setPen(QColor("#1D1D1F"))
+        painter.setPen(QColor(self.text_color))
         painter.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
         painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, f"{int(self.value)}%")
 
@@ -151,11 +158,11 @@ class LibraryCard(QFrame):
         self.setFixedSize(220, 150)
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(15)
-        shadow.setColor(QColor(0, 0, 0, 20))
-        shadow.setOffset(0, 4)
-        self.setGraphicsEffect(shadow)
+        self.shadow_effect = QGraphicsDropShadowEffect(self)
+        self.shadow_effect.setBlurRadius(15)
+        self.shadow_effect.setColor(QColor(0, 0, 0, 20))
+        self.shadow_effect.setOffset(0, 4)
+        self.setGraphicsEffect(self.shadow_effect)
 
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(15, 10, 15, 10)
@@ -258,48 +265,84 @@ class LibraryCard(QFrame):
             self.update_ui()
             self.state_changed.emit()
 
+    def apply_theme(self, theme_name):
+        self.current_theme = theme_name
+        self.update_ui()
+
     def update_ui(self):
+        t_name = getattr(self, 'current_theme', 'light')
+        t_bg = "rgba(255, 255, 255, 0.7)"
+        t_border = "#E2E8F0"
+        t_text = "#1D1D1F"
+        t_check_bg = "rgba(255, 255, 255, 0.5)"
+        t_primary = "#007AFF"
+        t_success = "#34C759"
+        
+        if t_name == "dark":
+            t_bg = "rgba(30, 30, 30, 0.7)"
+            t_border = "#333333"
+            t_text = "#F7FAFC"
+            t_check_bg = "rgba(255, 255, 255, 0.1)"
+            t_primary = "#4CAF50"
+            t_success = "#4CAF50"
+        elif t_name == "ocean":
+            t_bg = "rgba(15, 32, 55, 0.7)"
+            t_border = "#1E3A8A"
+            t_text = "#E2E8F0"
+            t_check_bg = "rgba(255, 255, 255, 0.1)"
+            t_primary = "#3B82F6"
+            t_success = "#10B981"
+
+        self.lbl_title.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {t_text};")
+        
         if self.is_checked:
             self.check_box.setText("✔")
-            self.check_box.setStyleSheet("background-color: #007AFF; color: white; border-radius: 11px; font-weight: bold; font-size: 14px; border: none;")
+            self.check_box.setStyleSheet(f"background-color: {t_primary}; color: white; border-radius: 11px; font-weight: bold; font-size: 14px; border: none;")
         else:
             self.check_box.setText("")
-            self.check_box.setStyleSheet("background-color: rgba(255, 255, 255, 0.5); border: 2px solid #E2E8F0; border-radius: 11px;")
+            self.check_box.setStyleSheet(f"background-color: {t_check_bg}; border: 2px solid {t_border}; border-radius: 11px;")
 
         if self.status == "LOADED" and not self.is_checked:
-            bg = "rgba(255, 245, 245, 0.8)"; border = "#FF3B30"
-            self.check_box.setStyleSheet("background-color: rgba(255,255,255,0.5); border: 2px solid #FF3B30; border-radius: 11px;") 
+            bg = "rgba(255, 60, 60, 0.15)"; border = "#FF3B30"
+            self.check_box.setStyleSheet(f"background-color: {t_check_bg}; border: 2px solid #FF3B30; border-radius: 11px;") 
             self.lbl_status.setText("سوف يتم حذف المرحلة ⚠️")
             self.lbl_status.setStyleSheet("color: #FF3B30; font-weight: bold; font-size: 12px; border: none;")
         elif self.is_checked:
             if self.status == "LOADED":
-                bg = "rgba(236, 253, 245, 0.8)"; border = "#34C759"
+                bg = "rgba(50, 200, 90, 0.15)"; border = t_success
                 self.lbl_status.setText(f"مكتملة في القلم")
-                self.lbl_status.setStyleSheet("color: #34C759; font-weight: bold; font-size: 12px; border: none;")
+                self.lbl_status.setStyleSheet(f"color: {t_success}; font-weight: bold; font-size: 12px; border: none;")
             elif self.status == "UPDATE":
-                bg = "rgba(255, 251, 235, 0.8)"; border = "#FF9500"
-                self.lbl_status.setText(f"نقص ({self.missing_count}) ملزمة ⚠️")
+                bg = "rgba(255, 150, 0, 0.15)"; border = "#FF9500"
+                self.lbl_status.setText(f"ينقصها {self.missing_count} ملف")
                 self.lbl_status.setStyleSheet("color: #FF9500; font-weight: bold; font-size: 12px; border: none;")
             else:
-                bg = "rgba(242, 247, 255, 0.8)"; border = "#007AFF"
-                self.lbl_status.setText("جاهزة للتثبيت")
-                self.lbl_status.setStyleSheet("color: #007AFF; font-weight: bold; font-size: 12px; border: none;")
+                bg = "rgba(0, 120, 255, 0.15)"; border = t_primary
+                self.lbl_status.setText(f"جاهزة للتحميل ({self.stage_size_mb:.1f} MB)")
+                self.lbl_status.setStyleSheet(f"color: {t_primary}; font-weight: bold; font-size: 12px; border: none;")
         else:
-            bg = "rgba(255, 255, 255, 0.85)"; border = "#E2E8F0"
-            if self.status == "SERVER_EMPTY":
-                self.lbl_status.setText("غير متوفرة بالسيرفر")
-                self.lbl_status.setStyleSheet("color: #86868B; font-weight: bold; font-size: 12px; border: none;")
-            elif self.status == "LOADED":
-                self.lbl_status.setText(f"مكتملة في القلم")
-                self.lbl_status.setStyleSheet("color: #34C759; font-weight: bold; font-size: 12px; border: none;")
-            elif self.status == "UPDATE":
-                self.lbl_status.setText(f"نقص ({self.missing_count}) ملزمة ⚠️")
+            bg = t_bg
+            border = t_border
+            if self.status == "UPDATE":
+                self.lbl_status.setText("يتوفر تحديث")
                 self.lbl_status.setStyleSheet("color: #FF9500; font-weight: bold; font-size: 12px; border: none;")
             else:
                 self.lbl_status.setText("جاهزة للتثبيت")
                 self.lbl_status.setStyleSheet("color: #4A5568; font-weight: bold; font-size: 12px; border: none;")
 
         self.setStyleSheet(f"LibraryCard {{ background-color: {bg}; border-radius: 20px; border: 1.5px solid {border}; }}")
+
+    def enterEvent(self, event):
+        if hasattr(self, 'shadow_effect'):
+            self.shadow_effect.setBlurRadius(25)
+            self.shadow_effect.setOffset(0, 8)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        if hasattr(self, 'shadow_effect'):
+            self.shadow_effect.setBlurRadius(15)
+            self.shadow_effect.setOffset(0, 4)
+        super().leaveEvent(event)
 
 # ================= إشارات النظام =================
 class SignalEmitter(QObject):
@@ -309,6 +352,7 @@ class SignalEmitter(QObject):
     sync_done = pyqtSignal(bool, str) 
     net_error = pyqtSignal(bool) # إشارة التحكم بشاشة انقطاع الإنترنت العائمة
     current_stage = pyqtSignal(str) # <-- إضافة هذه الإشارة لمعرفة المرحلة الحالية
+    update_available = pyqtSignal(str, str) # version, url
 
 # ================= نافذة تأكيد الحذف النظيفة =================
 class ConfirmDialog(QDialog):
@@ -372,6 +416,78 @@ class ConfirmDialog(QDialog):
     def reject_action(self):
         self.result = False
         self.reject()
+
+
+# ================= نافذة التنبيه بالأخطاء (فصل القلم وما شابه) =================
+class ErrorDialog(QDialog):
+    def __init__(self, parent, title, message):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setModal(True)
+        self.resize(400, 240)
+        self.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+
+        try: winsound.MessageBeep(winsound.MB_ICONHAND) 
+        except: pass
+
+        container = QFrame(self)
+        container.setStyleSheet("""
+            QFrame#err_container {
+                background-color: rgba(255, 255, 255, 0.95); 
+                border-radius: 16px; 
+                border: 1px solid rgba(0,0,0,0.1);
+            }
+            QLabel {
+                border: none;
+                background: transparent;
+            }
+        """)
+        container.setObjectName("err_container")
+        
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(35)
+        shadow.setColor(QColor(0, 0, 0, 45))
+        shadow.setOffset(0, 8)
+        container.setGraphicsEffect(shadow)
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(10, 10, 10, 10)
+        root.addWidget(container)
+
+        lay = QVBoxLayout(container)
+        lay.setContentsMargins(30, 25, 30, 25)
+        lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.setSpacing(15)
+
+        lbl_icon = QLabel("✕")
+        lbl_icon.setFixedSize(56, 56)
+        lbl_icon.setStyleSheet("background-color: #FEE2E2; color: #FF3B30; font-size: 30px; font-weight: bold; border-radius: 28px;")
+        lbl_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        icon_lay = QHBoxLayout()
+        icon_lay.addWidget(lbl_icon, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        lbl_title = QLabel(title)
+        lbl_title.setStyleSheet("font-size: 20px; font-weight: bold; color: #1D1D1F;")
+        lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        lbl_msg = QLabel(message)
+        lbl_msg.setStyleSheet("font-size: 14px; color: #4A5568; font-weight: bold;")
+        lbl_msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_msg.setWordWrap(True)
+
+        btn_ok = QPushButton("موافق")
+        btn_ok.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        btn_ok.setFixedHeight(44)
+        btn_ok.setStyleSheet("QPushButton { background-color: #FF3B30; color: white; font-weight: bold; font-size: 15px; border-radius: 8px; border: none; margin-top: 10px; } QPushButton:hover { background-color: #E03126; }")
+        btn_ok.clicked.connect(lambda: play_click_sound())
+        btn_ok.clicked.connect(self.accept)
+
+        lay.addLayout(icon_lay)
+        lay.addWidget(lbl_title)
+        lay.addWidget(lbl_msg)
+        lay.addWidget(btn_ok)
 
 
 # ================= نافذة التنبيه بنجاح التحديث (التصميم الاحترافي النهائي) =================
@@ -536,6 +652,7 @@ class ObyLibraryApp(QMainWindow):
         self.emitter.sync_done.connect(self.on_sync_done)
         self.emitter.net_error.connect(self.toggle_net_overlay)
         self.emitter.current_stage.connect(self.set_active_stage_card)
+        self.emitter.update_available.connect(self.show_update_dialog)
 
         self.all_server_files = []
         self.file_sizes_map = {} 
@@ -543,9 +660,17 @@ class ObyLibraryApp(QMainWindow):
         self.pen_drive = None
         self.is_fetching = False
         self.is_syncing = False
+        self.current_theme = "light"
+
+        # إعداد أيقونة شريط المهام (لإشعارات الويندوز)
+        self.tray_icon = QSystemTrayIcon(self)
+        icon = self.windowIcon() if not self.windowIcon().isNull() else self.style().standardIcon(QStyle.StandardPixmap.SP_DriveFDIcon)
+        self.tray_icon.setIcon(icon)
+        self.tray_icon.show()
 
         self.setup_ui()
         threading.Thread(target=self.fetch_manifest, daemon=True).start()
+        self.check_for_updates()
         self.monitor_pen()
 
     def setup_ui(self):
@@ -562,25 +687,55 @@ class ObyLibraryApp(QMainWindow):
         self.header_frame.setStyleSheet("background: transparent;")
         header_lay = QHBoxLayout(self.header_frame)
         header_lay.setContentsMargins(0, 0, 0, 0)
+        header_lay.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
-        title = QLabel("نظام تحديث القلم الناطق - الذكي")
-        title.setStyleSheet("font-size: 28px; font-weight: bold; color: #1D1D1F;")
+        # 1. Right Side (Title & Subtitle)
+        title_container = QWidget()
+        title_lay = QVBoxLayout(title_container)
+        title_lay.setContentsMargins(0, 0, 0, 0)
+        title_lay.setSpacing(6)
+
+        self.lbl_title = QLabel("نظام تحديث القلم الناطق - الذكي")
+        self.lbl_title.setStyleSheet("font-size: 26px; font-weight: bold; color: #1D1D1F;")
+
+        self.subtitle = QLabel("📌 حدد المراحل التي ترغب بتثبيتها أو تحديثها")
+        self.subtitle.setStyleSheet("background-color: transparent; color: #007AFF; font-weight: bold; font-size: 15px;")
+        
+        title_lay.addWidget(self.lbl_title)
+        title_lay.addWidget(self.subtitle)
+
+        # 2. Left Side Controls
+        self.btn_theme = QToolButton()
+        self.btn_theme.setText("🎨")
+        self.btn_theme.setFixedSize(40, 40)
+        self.btn_theme.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_theme.setStyleSheet("QToolButton { background-color: rgba(255,255,255,0.8); border-radius: 20px; font-size: 20px; border: 1.5px solid #E2E8F0; } QToolButton::menu-indicator { image: none; }")
+        
+        theme_menu = QMenu(self)
+        action_light = QAction("☀️ الوضع الفاتح", self)
+        action_light.triggered.connect(lambda: self.apply_theme("light"))
+        action_dark = QAction("🌙 الوضع الداكن", self)
+        action_dark.triggered.connect(lambda: self.apply_theme("dark"))
+        action_ocean = QAction("💧 الوضع الأزرق", self)
+        action_ocean.triggered.connect(lambda: self.apply_theme("ocean"))
+        
+        theme_menu.addAction(action_light)
+        theme_menu.addAction(action_dark)
+        theme_menu.addAction(action_ocean)
+        self.btn_theme.setMenu(theme_menu)
+        self.btn_theme.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
 
         self.pill_status = QLabel("بانتظار القلم...")
-        self.pill_status.setFixedSize(140, 35)
+        self.pill_status.setFixedSize(140, 36)
         self.pill_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.pill_status.setStyleSheet("background-color: rgba(255, 59, 48, 0.1); color: #FF3B30; border-radius: 17px; font-weight: bold; border: 1.5px solid rgba(255, 59, 48, 0.3);")
+        self.pill_status.setStyleSheet("background-color: rgba(255, 59, 48, 0.1); color: #FF3B30; border-radius: 18px; font-weight: bold; border: 1.5px solid rgba(255, 59, 48, 0.3);")
 
-        header_lay.addWidget(title)
-        header_lay.addStretch()
-        header_lay.addWidget(self.pill_status)
-        header_lay.addStretch()
-        
         storage_container = QWidget()
         storage_lay = QHBoxLayout(storage_container)
-        storage_lay.setContentsMargins(0,0,0,0)
+        storage_lay.setContentsMargins(0, 0, 0, 0)
+        storage_lay.setSpacing(12)
         
-        self.lbl_storage_text = QLabel("المساحة المتوفرة: --\nالإجمالي: --")
+        self.lbl_storage_text = QLabel("المساحة المتاحة: —\nالحجم الكلي: —")
         self.lbl_storage_text.setStyleSheet("font-size: 13px; font-weight: bold; color: #4A5568;")
         self.lbl_storage_text.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         
@@ -588,19 +743,18 @@ class ObyLibraryApp(QMainWindow):
         
         storage_lay.addWidget(self.lbl_storage_text)
         storage_lay.addWidget(self.circular_progress)
-        
-        header_lay.addWidget(storage_container)
-        main_lay.addWidget(self.header_frame)
 
-        subtitle = QLabel("تحديد المراحل المطلوبة (يفضل حذف المراحل الغير مطلوبة)")
-        subtitle.setStyleSheet("background-color: rgba(255, 59, 48, 0.1); color: #FF3B30; font-weight: bold; font-size: 15px; padding: 12px 30px; border-radius: 15px;")
-        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        sub_lay = QHBoxLayout()
-        sub_lay.addStretch()
-        sub_lay.addWidget(subtitle, alignment=Qt.AlignmentFlag.AlignCenter)
-        sub_lay.addStretch()
-        main_lay.addLayout(sub_lay)
-        main_lay.addSpacing(10)
+        # Assemble Header (Right to Left due to RTL)
+        header_lay.addWidget(title_container)
+        header_lay.addStretch()
+        header_lay.addWidget(self.btn_theme)
+        header_lay.addSpacing(20)
+        header_lay.addWidget(self.pill_status)
+        header_lay.addSpacing(30)
+        header_lay.addWidget(storage_container)
+
+        main_lay.addWidget(self.header_frame)
+        main_lay.addSpacing(15)
 
         self.grid_container = QFrame()
         self.grid_container.setStyleSheet("background: transparent;")
@@ -647,21 +801,21 @@ class ObyLibraryApp(QMainWindow):
         main_lay.addSpacing(5)
 
         btn_lay = QHBoxLayout()
-        btn_eject = QPushButton("⏏ إخراج القلم بأمان")
-        btn_eject.setFixedSize(180, 50)
-        btn_eject.setStyleSheet("QPushButton { background: rgba(255,255,255,0.8); border: 1.5px solid #E2E8F0; color: #1D1D1F; font-weight: bold; border-radius: 14px; font-size: 14px; } QPushButton:hover { background-color: #FFFFFF; }")
-        btn_eject.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        btn_eject.clicked.connect(lambda: play_click_sound())
-        btn_eject.clicked.connect(self.eject_pen)
+        self.btn_eject = QPushButton("⏏ إخراج القلم بأمان")
+        self.btn_eject.setFixedSize(180, 50)
+        self.btn_eject.setStyleSheet("QPushButton { background: rgba(255,255,255,0.8); border: 1.5px solid #E2E8F0; color: #1D1D1F; font-weight: bold; border-radius: 14px; font-size: 14px; } QPushButton:hover { background-color: #FFFFFF; }")
+        self.btn_eject.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_eject.clicked.connect(lambda: play_click_sound())
+        self.btn_eject.clicked.connect(self.eject_pen)
 
         self.btn_sync = QPushButton("بدء تحديث القلم")
         self.btn_sync.setFixedHeight(50)
         self.btn_sync.setStyleSheet("QPushButton { background: #007AFF; color: white; font-weight: bold; font-size: 16px; border-radius: 14px; border: none; } QPushButton:disabled { background: #CBD5E1; color: #F7FAFC; } QPushButton:hover { background-color: #0056B3; }")
         self.btn_sync.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.btn_sync.clicked.connect(lambda: play_click_sound())
+        self.btn_sync.clicked.connect(lambda: play_action_sound())
         self.btn_sync.clicked.connect(self.start_sync)
 
-        btn_lay.addWidget(btn_eject)
+        btn_lay.addWidget(self.btn_eject)
         btn_lay.addWidget(self.btn_sync, stretch=1)
         main_lay.addLayout(btn_lay)
 
@@ -712,15 +866,144 @@ class ObyLibraryApp(QMainWindow):
         overlay_lay.addSpacing(15)
         overlay_lay.addWidget(self.lbl_net_err_msg)
 
-        # --- إضافة تأثير الغبش (Blur) للخلفية ---
-        self.blur_effect = QGraphicsBlurEffect(self)
-        self.blur_effect.setBlurRadius(15) # درجة الغبش
-        self.blur_effect.setEnabled(False) # إيقافه افتراضياً
-        
-        # تطبيق التأثير على الحاوية الرئيسية للبطاقات
-        self.grid.parentWidget().setGraphicsEffect(self.blur_effect)
-
         self.net_overlay.hide()
+
+    def check_for_updates(self):
+        def worker():
+            try:
+                url = f"http://pdd.xdt.mybluehost.me/update_Student/student_version.txt?nocache={time.time()}"
+                r = requests.get(url, headers=HEADERS, timeout=5)
+                if r.status_code == 200:
+                    lines = r.text.splitlines()
+                    if lines:
+                        latest_version_str = lines[0].strip()
+                        try:
+                            v_local = float(APP_VERSION)
+                            v_remote = float(latest_version_str)
+                            if v_remote > v_local:
+                                download_url = lines[1].strip() if len(lines) > 1 else ""
+                                self.emitter.update_available.emit(latest_version_str, download_url)
+                        except ValueError:
+                            pass
+            except:
+                pass
+        threading.Thread(target=worker, daemon=True).start()
+
+    def show_update_dialog(self, version, url):
+        dialog = ConfirmDialog(self, "تحديث جديد متوفر", "يتوفر إصدار أحدث من البرنامج", [f"الإصدار الجديد: {version}"])
+        for btn in dialog.findChildren(QPushButton):
+            if btn.text() == "استمرار": btn.setText("تحميل الآن")
+            if btn.text() == "تراجع": btn.setText("لاحقاً")
+        dialog.exec()
+        if dialog.result and url:
+            import webbrowser
+            webbrowser.open(url)
+
+    def apply_theme(self, theme_name):
+        self.current_theme = theme_name
+        
+        themes = {
+            "light": {
+                "bg": "#F7FAFC",
+                "text": "#1D1D1F",
+                "sub_text": "#4A5568",
+                "btn_bg": "rgba(255,255,255,0.8)",
+                "btn_border": "#E2E8F0",
+                "circ_bg": "#E2E8F0",
+                "sync_btn": "#007AFF",
+                "sync_btn_hover": "#0056B3",
+                "pill_red_bg": "rgba(255, 59, 48, 0.1)",
+                "pill_red_text": "#FF3B30",
+                "pill_green_bg": "rgba(52, 199, 89, 0.1)",
+                "pill_green_text": "#34C759",
+                "prog_bg": "#E2E8F0",
+                "prog_chunk": "#007AFF",
+                "subtitle_bg": "rgba(0, 122, 255, 0.08)",
+                "subtitle_text": "#007AFF"
+            },
+            "dark": {
+                "bg": "#121212",
+                "text": "#F7FAFC",
+                "sub_text": "#A0AEC0",
+                "btn_bg": "rgba(30,30,30,0.8)",
+                "btn_border": "#333333",
+                "circ_bg": "#333333",
+                "sync_btn": "#4CAF50",
+                "sync_btn_hover": "#45A049",
+                "pill_red_bg": "rgba(255, 82, 82, 0.15)",
+                "pill_red_text": "#FF5252",
+                "pill_green_bg": "rgba(76, 175, 80, 0.15)",
+                "pill_green_text": "#4CAF50",
+                "prog_bg": "#333333",
+                "prog_chunk": "#4CAF50",
+                "subtitle_bg": "rgba(76, 175, 80, 0.15)",
+                "subtitle_text": "#4CAF50"
+            },
+            "ocean": {
+                "bg": "#0B192C",
+                "text": "#E2E8F0",
+                "sub_text": "#94A3B8",
+                "btn_bg": "rgba(15, 32, 55, 0.8)",
+                "btn_border": "#1E3A8A",
+                "circ_bg": "#1E3A8A",
+                "sync_btn": "#3B82F6",
+                "sync_btn_hover": "#2563EB",
+                "pill_red_bg": "rgba(239, 68, 68, 0.15)",
+                "pill_red_text": "#EF4444",
+                "pill_green_bg": "rgba(16, 185, 129, 0.15)",
+                "pill_green_text": "#10B981",
+                "prog_bg": "#1E3A8A",
+                "prog_chunk": "#3B82F6",
+                "subtitle_bg": "rgba(59, 130, 246, 0.15)",
+                "subtitle_text": "#3B82F6"
+            }
+        }
+        
+        t = themes.get(theme_name, themes["light"])
+        
+        self.centralWidget().setStyleSheet(f"QWidget#MainBG {{ background-color: {t['bg']}; }}")
+        
+        if hasattr(self, 'lbl_title'):
+            self.lbl_title.setStyleSheet(f"font-size: 28px; font-weight: bold; color: {t['text']};")
+            
+        if hasattr(self, 'subtitle'):
+            self.subtitle.setText("📌 حدد المراحل التي ترغب بتثبيتها أو تحديثها")
+            self.subtitle.setStyleSheet(f"background-color: transparent; color: {t['subtitle_text']}; font-weight: bold; font-size: 14px;")
+            
+        if hasattr(self, 'pill_status'):
+            if "متصل" in self.pill_status.text() and "غير" not in self.pill_status.text():
+                self.pill_status.setStyleSheet(f"background-color: {t['pill_green_bg']}; color: {t['pill_green_text']}; border-radius: 17px; font-weight: bold; border: 1.5px solid {t['pill_green_bg']};")
+            elif "إخراج" in self.pill_status.text() or "آلياً" in self.pill_status.text():
+                self.pill_status.setStyleSheet("background-color: rgba(255, 149, 0, 0.1); color: #FF9500; border-radius: 17px; font-weight: bold; border: 1.5px solid rgba(255, 149, 0, 0.3);")
+            else:
+                self.pill_status.setStyleSheet(f"background-color: {t['pill_red_bg']}; color: {t['pill_red_text']}; border-radius: 17px; font-weight: bold; border: 1.5px solid {t['pill_red_bg']};")
+            
+        if hasattr(self, 'lbl_storage_text'):
+            self.lbl_storage_text.setStyleSheet(f"font-size: 13px; font-weight: bold; color: {t['sub_text']};")
+            
+        if hasattr(self, 'circular_progress'):
+            self.circular_progress.bg_color = t['circ_bg']
+            self.circular_progress.text_color = t['text']
+            self.circular_progress.update()
+            
+        if hasattr(self, 'lbl_time'):
+            for lbl in [self.lbl_time, self.lbl_speed, self.lbl_size]:
+                lbl.setStyleSheet(f"font-weight: bold; font-size: 13px; color: {t['sub_text']}; background: transparent; border: none;")
+                
+        if hasattr(self, 'bar'):
+            self.bar.setStyleSheet(f"QProgressBar {{ background-color: {t['prog_bg']}; border-radius: 4px; border: none; }} QProgressBar::chunk {{ background-color: {t['prog_chunk']}; border-radius: 4px; }}")
+            
+        if hasattr(self, 'btn_eject'):
+            self.btn_eject.setStyleSheet(f"QPushButton {{ background: {t['btn_bg']}; border: 1.5px solid {t['btn_border']}; color: {t['text']}; font-weight: bold; border-radius: 14px; font-size: 14px; }} QPushButton:hover {{ background-color: rgba(255,255,255,0.1); }}")
+            
+        if hasattr(self, 'btn_sync'):
+            self.btn_sync.setStyleSheet(f"QPushButton {{ background: {t['sync_btn']}; color: white; font-weight: bold; font-size: 16px; border-radius: 14px; border: none; }} QPushButton:disabled {{ background: {t['circ_bg']}; color: {t['sub_text']}; }} QPushButton:hover {{ background-color: {t['sync_btn_hover']}; }}")
+            
+        if hasattr(self, 'btn_theme'):
+            self.btn_theme.setStyleSheet(f"QToolButton {{ background-color: {t['btn_bg']}; border-radius: 20px; font-size: 20px; border: 1.5px solid {t['btn_border']}; }} QToolButton::menu-indicator {{ image: none; }}")
+            
+        for c in self.stage_cards:
+            c.apply_theme(theme_name)
 
     def check_selection(self):
         if self.is_syncing: return
@@ -752,7 +1035,7 @@ class ObyLibraryApp(QMainWindow):
                 self.pen_drive = None
                 self.pill_status.setText("القلم غير متصل ○")
                 self.pill_status.setStyleSheet("background-color: rgba(255, 59, 48, 0.1); color: #FF3B30; border-radius: 17px; font-weight: bold; border: 1.5px solid rgba(255, 59, 48, 0.3);")
-                self.lbl_storage_text.setText("المساحة المتوفرة: --\nالإجمالي: --")
+                self.lbl_storage_text.setText("المساحة المتاحة: —\nالحجم الكلي: —")
                 self.circular_progress.setValue(0)
                 for c in self.stage_cards:
                     c.status = "NOT_SYNCED"
@@ -788,7 +1071,7 @@ class ObyLibraryApp(QMainWindow):
             gb_free = (total - used) / (2**30)
             pct = int((used / total) * 100)
             
-            self.lbl_storage_text.setText(f"المساحة المتوفرة: {gb_free:.1f} جيجا\nالإجمالي: {gb_total:.1f} جيجا")
+            self.lbl_storage_text.setText(f"المساحة المتاحة: {gb_free:.1f} GB\nالحجم الكلي: {gb_total:.1f} GB")
             self.circular_progress.setValue(pct)
         except: pass
 
@@ -971,12 +1254,12 @@ class ObyLibraryApp(QMainWindow):
 
     def toggle_net_overlay(self, visible):
         if visible:
-            # تشغيل صوت تنبيه ويندوز القياسي (MessageBeep)
             try: winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
             except: pass
             
-            # تفعيل تأثير الغبش على الحاوية
-            self.blur_effect.setEnabled(True)
+            blur = QGraphicsBlurEffect(self)
+            blur.setBlurRadius(15)
+            self.centralWidget().setGraphicsEffect(blur)
             
             self.net_overlay.show()
             self.net_overlay.raise_()
@@ -984,8 +1267,7 @@ class ObyLibraryApp(QMainWindow):
         else:
             if hasattr(self, 'net_overlay'):
                 self.net_overlay.hide()
-            if hasattr(self, 'blur_effect'):
-                self.blur_effect.setEnabled(False)
+            self.centralWidget().setGraphicsEffect(None)
 
     def set_active_stage_card(self, active_stage_name):
         # تفعيل شريط التحميل فقط للبطاقة التي يتم تحميل ملزمتها حالياً
@@ -1001,6 +1283,26 @@ class ObyLibraryApp(QMainWindow):
         
         sel_stages = [c.stage_name for c in self.stage_cards if c.is_checked and c.isEnabled()]
         files = [f for f in self.all_server_files if f['stage'] in sel_stages]
+
+        try:
+            total_needed_bytes = sum(c.stage_size_mb for c in self.stage_cards if c.is_checked and c.isEnabled()) * 1024 * 1024
+            total, used, free = shutil.disk_usage(self.pen_drive)
+            if free < total_needed_bytes:
+                blur = QGraphicsBlurEffect(self)
+                blur.setBlurRadius(15)
+                self.centralWidget().setGraphicsEffect(blur)
+
+                msg = (
+                    "مساحة القلم غير كافية لتحميل المراحل المحددة.\n\n"
+                    f"المساحة المطلوبة: {total_needed_bytes/(1024*1024*1024):.2f} GB\n"
+                    f"المساحة المتوفرة: {free/(1024*1024*1024):.2f} GB"
+                )
+                err_dialog = ErrorDialog(self, "مساحة غير كافية", msg)
+                err_dialog.exec()
+
+                self.centralWidget().setGraphicsEffect(None)
+                return
+        except: pass
 
         actual_stages_on_pen = set()
         try:
@@ -1165,6 +1467,9 @@ class ObyLibraryApp(QMainWindow):
                         break 
                         
                     except (requests.exceptions.RequestException, Exception):
+                        if not self.pen_drive or not os.path.exists(self.pen_drive):
+                            self.emitter.sync_done.emit(False, "DISCONNECTED")
+                            return
                         self.emitter.net_error.emit(True)
                         time.sleep(3) 
                         continue
@@ -1215,6 +1520,11 @@ class ObyLibraryApp(QMainWindow):
         self.update_storage_info()
         
         if success:
+            try: self.tray_icon.showMessage("تحديث القلم", "اكتمل التحديث بنجاح!", QSystemTrayIcon.MessageIcon.Information, 5000)
+            except: pass
+            try: winsound.MessageBeep(winsound.MB_ICONASTERISK)
+            except: pass
+            
             # تصفير شريط التحميل فوراً
             self.lbl_time.setText("تم التحديث بنجاح ✔")
             self.lbl_time.setStyleSheet("color: #34C759; font-weight: bold; font-size: 14px; background:transparent; border:none;")
@@ -1242,8 +1552,27 @@ class ObyLibraryApp(QMainWindow):
             self.centralWidget().setGraphicsEffect(None)
             
         else:
-            self.lbl_time.setText(f"خطأ: {msg}")
-            self.lbl_time.setStyleSheet("color: #FF3B30; font-weight: bold; font-size: 13px; background:transparent; border:none;")
+            if msg == "DISCONNECTED":
+                self.lbl_time.setText("خطأ: تم فصل القلم!")
+                self.lbl_time.setStyleSheet("color: #FF3B30; font-weight: bold; font-size: 14px; background:transparent; border:none;")
+                self.lbl_speed.setText("")
+                self.lbl_size.setText("0.0 / 0.0 MB") 
+                self.bar.setValue(0)
+                self.lbl_pct.setText("0%")
+
+                self.emitter.net_error.emit(False)
+
+                blur = QGraphicsBlurEffect(self)
+                blur.setBlurRadius(15)
+                self.centralWidget().setGraphicsEffect(blur)
+
+                err_dialog = ErrorDialog(self, "خطأ في الاتصال", "تم فصل القلم أثناء التحديث!\nيرجى توصيل القلم والمحاولة مرة أخرى.")
+                err_dialog.exec()
+
+                self.centralWidget().setGraphicsEffect(None)
+            else:
+                self.lbl_time.setText(f"خطأ: {msg}")
+                self.lbl_time.setStyleSheet("color: #FF3B30; font-weight: bold; font-size: 13px; background:transparent; border:none;")
             
         for c in self.stage_cards: 
             c.set_syncing_state(False)
