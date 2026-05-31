@@ -16,9 +16,10 @@ from concurrent.futures import ThreadPoolExecutor
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QPushButton, QProgressBar, 
                              QGraphicsDropShadowEffect, QFrame, QGridLayout, QDialog, QGraphicsBlurEffect, 
-                             QListWidget, QListWidgetItem, QAbstractItemView, QSystemTrayIcon, QStyle, QToolButton, QMenu)
-from PyQt6.QtCore import Qt, pyqtSignal, QObject, QTimer, QRectF
-from PyQt6.QtGui import QColor, QFont, QCursor, QPainter, QPen, QAction
+                             QListWidget, QListWidgetItem, QAbstractItemView, QSystemTrayIcon, QStyle, QToolButton, QMenu,
+                             QGraphicsOpacityEffect, QLineEdit, QComboBox, QStackedWidget)
+from PyQt6.QtCore import Qt, pyqtSignal, QObject, QTimer, QRectF, QPropertyAnimation, QEasingCurve
+from PyQt6.QtGui import QColor, QFont, QCursor, QPainter, QPen, QAction, QPainterPath, QLinearGradient, QBrush
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 os.environ["QT_LOGGING_RULES"] = "qt.qpa.window=false"
@@ -113,34 +114,68 @@ def get_remote_size(url):
     except: pass
     return 0
 
-# ================= دائرة المساحة الاحترافية =================
-class CircularProgress(QWidget):
+# ================= شريط المساحة المرئي (Storage Visualizer) =================
+class StorageBarWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedSize(50, 50)
-        self.value = 0
-        self.bg_color = "#E2E8F0"
-        self.text_color = "#1D1D1F"
+        self.setFixedHeight(12)
+        self.setMinimumWidth(200)
+        self.used_pct = 0.0
+        self.update_pct = 0.0
+        self.free_pct = 100.0
 
-    def setValue(self, val):
-        self.value = val
+    def setValues(self, used, update, free):
+        self.used_pct = used
+        self.update_pct = update
+        self.free_pct = free
         self.update()
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        rect = QRectF(5, 5, self.width()-10, self.height()-10)
+        rect = self.rect()
+        w = rect.width()
+        h = rect.height()
         
-        painter.setPen(QPen(QColor(self.bg_color), 4))
-        painter.drawArc(rect, 0, 360 * 16)
+        # 1. Background (Free Space)
+        path_free = QPainterPath()
+        path_free.addRoundedRect(0, 0, w, h, h/2, h/2)
+        painter.fillPath(path_free, QColor("#E2E8F0"))
         
-        color = "#007AFF" if self.value < 85 else "#FF3B30"
-        painter.setPen(QPen(QColor(color), 4))
-        painter.drawArc(rect, 90 * 16, int(-self.value / 100 * 360 * 16))
+        w_used = int(w * (self.used_pct / 100.0))
+        w_update = int(w * (self.update_pct / 100.0))
         
-        painter.setPen(QColor(self.text_color))
-        painter.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
-        painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, f"{int(self.value)}%")
+        # 2. Update Space (Yellow/Orange)
+        if w_used + w_update > 0:
+            path_update = QPainterPath()
+            path_update.addRoundedRect(0, 0, min(w_used + w_update, w), h, h/2, h/2)
+            painter.fillPath(path_update, QColor("#F59E0B"))
+            
+        # 3. Used Space (Blue)
+        if w_used > 0:
+            path_used = QPainterPath()
+            path_used.addRoundedRect(0, 0, min(w_used, w), h, h/2, h/2)
+            painter.fillPath(path_used, QColor("#3B82F6"))
+
+
+
+# ================= بطاقة تحميل هيكلية (Skeleton) =================
+class SkeletonCard(QFrame):
+    def __init__(self):
+        super().__init__()
+        self.setFixedSize(220, 150)
+        self.setStyleSheet("background-color: #E2E8F0; border-radius: 12px;")
+        
+        self.opacity_effect = QGraphicsOpacityEffect(self)
+        self.setGraphicsEffect(self.opacity_effect)
+        
+        self.anim = QPropertyAnimation(self.opacity_effect, b"opacity")
+        self.anim.setDuration(800)
+        self.anim.setStartValue(1.0)
+        self.anim.setEndValue(0.4)
+        self.anim.setEasingCurve(QEasingCurve.Type.InOutSine)
+        self.anim.setLoopCount(-1)
+        self.anim.start()
 
 # ================= بطاقة المكتبة =================
 class LibraryCard(QFrame):
@@ -334,14 +369,34 @@ class LibraryCard(QFrame):
 
     def enterEvent(self, event):
         if hasattr(self, 'shadow_effect'):
-            self.shadow_effect.setBlurRadius(25)
-            self.shadow_effect.setOffset(0, 8)
+            self._anim_blur = QPropertyAnimation(self.shadow_effect, b"blurRadius", self)
+            self._anim_blur.setDuration(200)
+            self._anim_blur.setEndValue(25)
+            self._anim_blur.setEasingCurve(QEasingCurve.Type.OutQuad)
+            
+            self._anim_offset = QPropertyAnimation(self.shadow_effect, b"offset", self)
+            self._anim_offset.setDuration(200)
+            self._anim_offset.setEndValue(QRectF(0, 8, 0, 0).topLeft())
+            self._anim_offset.setEasingCurve(QEasingCurve.Type.OutQuad)
+            
+            self._anim_blur.start()
+            self._anim_offset.start()
         super().enterEvent(event)
 
     def leaveEvent(self, event):
         if hasattr(self, 'shadow_effect'):
-            self.shadow_effect.setBlurRadius(15)
-            self.shadow_effect.setOffset(0, 4)
+            self._anim_blur = QPropertyAnimation(self.shadow_effect, b"blurRadius", self)
+            self._anim_blur.setDuration(200)
+            self._anim_blur.setEndValue(15)
+            self._anim_blur.setEasingCurve(QEasingCurve.Type.OutQuad)
+            
+            self._anim_offset = QPropertyAnimation(self.shadow_effect, b"offset", self)
+            self._anim_offset.setDuration(200)
+            self._anim_offset.setEndValue(QRectF(0, 4, 0, 0).topLeft())
+            self._anim_offset.setEasingCurve(QEasingCurve.Type.OutQuad)
+            
+            self._anim_blur.start()
+            self._anim_offset.start()
         super().leaveEvent(event)
 
 # ================= إشارات النظام =================
@@ -350,9 +405,9 @@ class SignalEmitter(QObject):
     sizes_ready = pyqtSignal(dict)
     progress = pyqtSignal(int, str, str, str) 
     sync_done = pyqtSignal(bool, str) 
-    net_error = pyqtSignal(bool) # إشارة التحكم بشاشة انقطاع الإنترنت العائمة
-    current_stage = pyqtSignal(str) # <-- إضافة هذه الإشارة لمعرفة المرحلة الحالية
-    update_available = pyqtSignal(str, str) # version, url
+    net_error = pyqtSignal(bool)
+    current_stage = pyqtSignal(str)
+    update_available = pyqtSignal(str, str)
 
 # ================= نافذة تأكيد الحذف النظيفة =================
 class ConfirmDialog(QDialog):
@@ -416,6 +471,9 @@ class ConfirmDialog(QDialog):
     def reject_action(self):
         self.result = False
         self.reject()
+
+
+
 
 
 # ================= نافذة التنبيه بالأخطاء (فصل القلم وما شابه) =================
@@ -635,6 +693,134 @@ class SuccessDialog(QDialog):
         lay.addWidget(list_widget)
         lay.addWidget(self.btn_ok)
         
+# ================= كلاس واجهة التسجيل =================
+class RegistrationScreen(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setStyleSheet("background-color: transparent;")
+        
+        main_lay = QVBoxLayout(self)
+        main_lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        container = QFrame()
+        container.setFixedSize(500, 550)
+        container.setStyleSheet("""
+            QFrame {
+                background-color: rgba(255, 255, 255, 0.85);
+                border-radius: 20px;
+                border: 1px solid #E2E8F0;
+            }
+        """)
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(30); shadow.setColor(QColor(0,0,0,30)); shadow.setOffset(0,10)
+        container.setGraphicsEffect(shadow)
+        
+        lay = QVBoxLayout(container)
+        lay.setContentsMargins(40, 40, 40, 40)
+        lay.setSpacing(20)
+        
+        lbl_icon = QLabel("🎓")
+        lbl_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_icon.setStyleSheet("font-size: 60px; background: transparent; border: none;")
+        
+        lbl_title = QLabel("أهلاً بك في مكتبة القلم الذكي")
+        lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_title.setStyleSheet("font-size: 24px; font-weight: bold; color: #1D1D1F; background: transparent; border: none;")
+        
+        lbl_sub = QLabel("يرجى إدخال بياناتك للمتابعة")
+        lbl_sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_sub.setStyleSheet("font-size: 14px; color: #4A5568; background: transparent; border: none; margin-bottom: 10px;")
+        
+        input_style = """
+            QLineEdit, QComboBox {
+                background-color: #F7FAFC;
+                border: 2px solid #E2E8F0;
+                border-radius: 12px;
+                padding: 12px;
+                font-size: 14px;
+                color: #1D1D1F;
+            }
+            QLineEdit:focus, QComboBox:focus {
+                border: 2px solid #007AFF;
+                background-color: #FFFFFF;
+            }
+        """
+        
+        self.inp_name = QLineEdit()
+        self.inp_name.setPlaceholderText("الاسم الكامل")
+        self.inp_name.setStyleSheet(input_style)
+        
+        self.inp_phone = QLineEdit()
+        self.inp_phone.setPlaceholderText("رقم الهاتف (اختياري)")
+        self.inp_phone.setStyleSheet(input_style)
+        
+        self.combo_stage = QComboBox()
+        self.combo_stage.addItems(["اختر المرحلة الدراسية...", "اول متوسط", "ثاني متوسط", "ثالث متوسط", "رابع علمي", "رابع ادبي", "خامس علمي", "خامس ابتدائي", "سادس علمي", "سادس ادبي", "سادس ابتدائي", "سادس صناعي"])
+        self.combo_stage.setStyleSheet(input_style)
+        
+        self.combo_gov = QComboBox()
+        self.combo_gov.addItems(["اختر المحافظة...", "بغداد", "البصرة", "نينوى", "أربيل", "النجف", "كربلاء", "ذي قار", "كركوك", "الأنبار", "ديالى", "بابل", "واسط", "ميسان", "المثنى", "الديوانية", "السليمانية", "دهوك", "صلاح الدين"])
+        self.combo_gov.setStyleSheet(input_style)
+        
+        self.lbl_error = QLabel("")
+        self.lbl_error.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_error.setStyleSheet("color: #FF3B30; font-size: 12px; background: transparent; border: none; font-weight: bold;")
+        self.lbl_error.hide()
+        
+        self.btn_submit = QPushButton("ابدأ الآن")
+        self.btn_submit.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_submit.setStyleSheet("""
+            QPushButton {
+                background-color: #007AFF;
+                color: white;
+                border-radius: 12px;
+                padding: 14px;
+                font-size: 16px;
+                font-weight: bold;
+                border: none;
+                margin-top: 10px;
+            }
+            QPushButton:hover { background-color: #0056B3; }
+        """)
+        
+        lay.addWidget(lbl_icon)
+        lay.addWidget(lbl_title)
+        lay.addWidget(lbl_sub)
+        lay.addWidget(self.inp_name)
+        lay.addWidget(self.inp_phone)
+        lay.addWidget(self.combo_stage)
+        lay.addWidget(self.combo_gov)
+        lay.addWidget(self.lbl_error)
+        lay.addWidget(self.btn_submit)
+        
+        main_lay.addWidget(container)
+
+    def validate_inputs(self):
+        name = self.inp_name.text().strip()
+        stage = self.combo_stage.currentText()
+        gov = self.combo_gov.currentText()
+        
+        if len(name) < 3:
+            self.lbl_error.setText("يرجى إدخال الاسم بشكل صحيح")
+            self.lbl_error.show()
+            return False
+        if self.combo_stage.currentIndex() == 0:
+            self.lbl_error.setText("يرجى اختيار المرحلة الدراسية")
+            self.lbl_error.show()
+            return False
+        if self.combo_gov.currentIndex() == 0:
+            self.lbl_error.setText("يرجى اختيار المحافظة")
+            self.lbl_error.show()
+            return False
+            
+        self.lbl_error.hide()
+        return {
+            "name": name,
+            "phone": self.inp_phone.text().strip(),
+            "stage": stage,
+            "governorate": gov
+        }
+
 # ================= الواجهة والمحرك =================
 class ObyLibraryApp(QMainWindow):
     def __init__(self):
@@ -669,17 +855,27 @@ class ObyLibraryApp(QMainWindow):
         self.tray_icon.show()
 
         self.setup_ui()
+        
+        cache_file = os.path.join(os.getenv('APPDATA', ''), "Tabaay_Student_Stages.json")
+        if not os.path.exists(cache_file):
+            self.show_skeletons()
+            
         threading.Thread(target=self.fetch_manifest, daemon=True).start()
         self.check_for_updates()
         self.monitor_pen()
 
     def setup_ui(self):
-        bg = QWidget(self)
-        bg.setStyleSheet("QWidget#MainBG { background-color: #F7FAFC; }")
-        bg.setObjectName("MainBG")
-        self.setCentralWidget(bg)
+        container = QWidget(self)
+        container.setObjectName("MainBG")
+        self.setCentralWidget(container)
+        
+        self.content_widget = QWidget(container)
+        self.content_widget.setObjectName("MainBG")
+        self.content_widget.resize(1100, 750)
+        
+        container.setStyleSheet("QWidget#MainBG { background-color: #F7FAFC; }")
 
-        main_lay = QVBoxLayout(bg)
+        main_lay = QVBoxLayout(self.content_widget)
         main_lay.setContentsMargins(30, 20, 30, 20)
         main_lay.setSpacing(15)
 
@@ -705,6 +901,7 @@ class ObyLibraryApp(QMainWindow):
         title_lay.addWidget(self.subtitle)
 
         # 2. Left Side Controls
+
         self.btn_theme = QToolButton()
         self.btn_theme.setText("🎨")
         self.btn_theme.setFixedSize(40, 40)
@@ -736,13 +933,18 @@ class ObyLibraryApp(QMainWindow):
         storage_lay.setSpacing(12)
         
         self.lbl_storage_text = QLabel("المساحة المتاحة: —\nالحجم الكلي: —")
-        self.lbl_storage_text.setStyleSheet("font-size: 13px; font-weight: bold; color: #4A5568;")
+        self.lbl_storage_text.setStyleSheet("font-size: 12px; font-weight: bold; color: #4A5568;")
         self.lbl_storage_text.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         
-        self.circular_progress = CircularProgress()
+        self.storage_bar = StorageBarWidget()
         
-        storage_lay.addWidget(self.lbl_storage_text)
-        storage_lay.addWidget(self.circular_progress)
+        storage_vlay = QVBoxLayout()
+        storage_vlay.setSpacing(4)
+        storage_vlay.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        storage_vlay.addWidget(self.lbl_storage_text)
+        storage_vlay.addWidget(self.storage_bar)
+        
+        storage_lay.addLayout(storage_vlay)
 
         # Assemble Header (Right to Left due to RTL)
         header_lay.addWidget(title_container)
@@ -773,6 +975,7 @@ class ObyLibraryApp(QMainWindow):
         self.bar.setFixedHeight(8)
         self.bar.setTextVisible(False)
         self.bar.setStyleSheet("QProgressBar { background-color: #E2E8F0; border-radius: 4px; border: none; } QProgressBar::chunk { background-color: #007AFF; border-radius: 4px; }")
+        
         prog_vlay.addWidget(self.bar)
 
         info_lay = QHBoxLayout()
@@ -820,7 +1023,7 @@ class ObyLibraryApp(QMainWindow):
         main_lay.addLayout(btn_lay)
 
         # شاشة التنبيه العائمة لقطع الاتصال بالإنترنت في منتصف البرنامج
-        self.net_overlay = QFrame(self.centralWidget())
+        self.net_overlay = QFrame(container)
         self.net_overlay.setObjectName("NetOverlay")
         self.net_overlay.setStyleSheet("""
             QFrame#NetOverlay {
@@ -961,7 +1164,10 @@ class ObyLibraryApp(QMainWindow):
         
         t = themes.get(theme_name, themes["light"])
         
-        self.centralWidget().setStyleSheet(f"QWidget#MainBG {{ background-color: {t['bg']}; }}")
+        if hasattr(self, 'main_container'):
+            self.main_container.setStyleSheet(f"QWidget#MainBG {{ background-color: {t['bg']}; }}")
+        if hasattr(self, 'reg_screen'):
+            self.reg_screen.setStyleSheet(f"QWidget#RegBG {{ background-color: {t['bg']}; }}")
         
         if hasattr(self, 'lbl_title'):
             self.lbl_title.setStyleSheet(f"font-size: 28px; font-weight: bold; color: {t['text']};")
@@ -981,10 +1187,8 @@ class ObyLibraryApp(QMainWindow):
         if hasattr(self, 'lbl_storage_text'):
             self.lbl_storage_text.setStyleSheet(f"font-size: 13px; font-weight: bold; color: {t['sub_text']};")
             
-        if hasattr(self, 'circular_progress'):
-            self.circular_progress.bg_color = t['circ_bg']
-            self.circular_progress.text_color = t['text']
-            self.circular_progress.update()
+        if hasattr(self, 'storage_bar'):
+            self.storage_bar.update()
             
         if hasattr(self, 'lbl_time'):
             for lbl in [self.lbl_time, self.lbl_speed, self.lbl_size]:
@@ -1036,7 +1240,7 @@ class ObyLibraryApp(QMainWindow):
                 self.pill_status.setText("القلم غير متصل ○")
                 self.pill_status.setStyleSheet("background-color: rgba(255, 59, 48, 0.1); color: #FF3B30; border-radius: 17px; font-weight: bold; border: 1.5px solid rgba(255, 59, 48, 0.3);")
                 self.lbl_storage_text.setText("المساحة المتاحة: —\nالحجم الكلي: —")
-                self.circular_progress.setValue(0)
+                self.storage_bar.setValues(0, 0, 100)
                 for c in self.stage_cards:
                     c.status = "NOT_SYNCED"
                     c.set_checked(False)
@@ -1062,8 +1266,16 @@ class ObyLibraryApp(QMainWindow):
                 pen_files = [f.lower() for f in os.listdir(self.pen_drive) if f.lower().endswith('.alt')]
             
             for act in selected_acts:
+                expected_size = self.file_sizes_map.get(act, 0)
                 if act.lower() not in pen_files:
-                    predicted_bytes += self.file_sizes_map.get(act, 0)
+                    predicted_bytes += expected_size
+                elif expected_size > 0:
+                    try:
+                        dest_path = os.path.join(self.pen_drive, act)
+                        actual_size = os.path.getsize(dest_path)
+                        if actual_size < expected_size:
+                            predicted_bytes += (expected_size - actual_size)
+                    except: pass
             
             selected_acts_lower = {a.lower() for a in selected_acts}
             bytes_to_free = 0
@@ -1074,16 +1286,20 @@ class ObyLibraryApp(QMainWindow):
                             bytes_to_free += os.path.getsize(os.path.join(self.pen_drive, f))
                         except: pass
             
-            future_used = used + predicted_bytes - bytes_to_free
-            if future_used > total: future_used = total
-            if future_used < 0: future_used = 0
-
+            actual_used = used - bytes_to_free
+            if actual_used < 0: actual_used = 0
+            
+            used_pct = (actual_used / total) * 100 if total > 0 else 0
+            update_pct = (predicted_bytes / total) * 100 if total > 0 else 0
+            free_pct = 100 - used_pct - update_pct
+            if free_pct < 0: free_pct = 0
+            
             gb_total = total / (2**30)
-            gb_free = (total - future_used) / (2**30)
-            pct = int((future_used / total) * 100)
+            gb_free = (total - actual_used - predicted_bytes) / (2**30)
+            if gb_free < 0: gb_free = 0
             
             self.lbl_storage_text.setText(f"المساحة المتاحة: {gb_free:.1f} GB\nالحجم الكلي: {gb_total:.1f} GB")
-            self.circular_progress.setValue(pct)
+            self.storage_bar.setValues(used_pct, update_pct, free_pct)
         except: pass
 
     def eject_pen(self):
@@ -1094,6 +1310,19 @@ class ObyLibraryApp(QMainWindow):
     def fetch_manifest(self):
         if self.is_fetching: return
         self.is_fetching = True
+        
+        import json
+        cache_file = os.path.join(os.getenv('APPDATA', ''), "Tabaay_Student_Stages.json")
+        try:
+            if os.path.exists(cache_file):
+                with open(cache_file, 'r', encoding='utf-8') as cf:
+                    cached_files = json.load(cf)
+                    if cached_files:
+                        self.emitter.data_ready.emit(cached_files)
+                        # Start size fetcher early based on cache so UI looks complete
+                        threading.Thread(target=self.fetch_sizes_worker, args=(cached_files,), daemon=True).start()
+        except Exception: pass
+
         try:
             url = f"{BASE_URL_FILES}/files.txt?nocache={time.time()}"
             r = requests.get(url, headers=HEADERS, timeout=10)
@@ -1113,14 +1342,21 @@ class ObyLibraryApp(QMainWindow):
                     
                     mapped_items = map_and_expand_stages(act, disp, raw_stage)
                     raw_files.extend(mapped_items)
+            
+            try:
+                with open(cache_file, 'w', encoding='utf-8') as cf:
+                    json.dump(raw_files, cf, ensure_ascii=False)
+            except Exception: pass
                     
             self.emitter.data_ready.emit(raw_files)
             
-            # جلب أحجام الملفات الصافية بالخلفية لضمان عدم تجميد الواجهة
+            # Fetch fresh sizes
             threading.Thread(target=self.fetch_sizes_worker, args=(raw_files,), daemon=True).start()
             
         except Exception:
             self.is_fetching = False
+            self.emitter.net_error.emit(True)
+
 
     def fetch_sizes_worker(self, files):
         import json
@@ -1167,6 +1403,24 @@ class ObyLibraryApp(QMainWindow):
     def on_sizes_ready(self, sizes_map):
         self.file_sizes_map = sizes_map
         self.update_cards_state(force_auto_select=False)
+
+    def show_skeletons(self):
+        for i in reversed(range(self.grid.count())):
+            widget = self.grid.itemAt(i).widget()
+            if widget: widget.setParent(None)
+            
+        width = self.grid_container.width() if self.grid_container.width() > 0 else 1100
+        cols = max(1, width // 240)
+        num_skeletons = cols * 2 if cols > 0 else 8
+        
+        row, col = 0, 0
+        for _ in range(num_skeletons):
+            skel = SkeletonCard()
+            self.grid.addWidget(skel, row, col)
+            col += 1
+            if col >= cols:
+                col = 0
+                row += 1
 
     def build_grid(self, files):
         self.is_fetching = False
@@ -1227,13 +1481,21 @@ class ObyLibraryApp(QMainWindow):
             total_size_bytes = 0
             
             for item in s_files:
-                # تحديث الحجم الحقيقي بدقة للمرحلة
-                total_size_bytes += getattr(self, 'file_sizes_map', {}).get(item['act'], 0)
+                expected_size = getattr(self, 'file_sizes_map', {}).get(item['act'], 0)
+                total_size_bytes += expected_size
                 
                 if item['act'].lower() not in pen_files:
                     missing += 1
-                elif not item.get('is_shared', False):
-                    has_exclusive = True
+                else:
+                    dest_path = os.path.join(self.pen_drive, item['act'])
+                    actual_size = 0
+                    try: actual_size = os.path.getsize(dest_path)
+                    except: pass
+                    
+                    if expected_size > 0 and actual_size != expected_size:
+                        missing += 1
+                    elif not item.get('is_shared', False):
+                        has_exclusive = True
 
             # حل ذكي لمنع تحذير الحذف الخطأ للمراحل المشتركة
             if not has_exclusive and len(s_files) > 0:
@@ -1252,6 +1514,8 @@ class ObyLibraryApp(QMainWindow):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        if hasattr(self, 'content_widget'):
+            self.content_widget.resize(event.size())
         self.rearrange_grid()
         if hasattr(self, 'net_overlay') and self.net_overlay.isVisible():
             self.center_net_overlay()
@@ -1270,7 +1534,8 @@ class ObyLibraryApp(QMainWindow):
             
             blur = QGraphicsBlurEffect(self)
             blur.setBlurRadius(15)
-            self.centralWidget().setGraphicsEffect(blur)
+            if hasattr(self, 'content_widget'):
+                self.content_widget.setGraphicsEffect(blur)
             
             self.net_overlay.show()
             self.net_overlay.raise_()
@@ -1278,7 +1543,8 @@ class ObyLibraryApp(QMainWindow):
         else:
             if hasattr(self, 'net_overlay'):
                 self.net_overlay.hide()
-            self.centralWidget().setGraphicsEffect(None)
+            if hasattr(self, 'content_widget'):
+                self.content_widget.setGraphicsEffect(None)
 
     def set_active_stage_card(self, active_stage_name):
         # تفعيل شريط التحميل فقط للبطاقة التي يتم تحميل ملزمتها حالياً
@@ -1327,7 +1593,7 @@ class ObyLibraryApp(QMainWindow):
             if future_free < bytes_to_download:
                 blur = QGraphicsBlurEffect(self)
                 blur.setBlurRadius(15)
-                self.centralWidget().setGraphicsEffect(blur)
+                getattr(self, 'content_widget', self.centralWidget()).setGraphicsEffect(blur)
 
                 msg = (
                     "مساحة القلم غير كافية لتحميل المراحل المحددة.\n\n"
@@ -1338,7 +1604,7 @@ class ObyLibraryApp(QMainWindow):
                 err_dialog = ErrorDialog(self, "مساحة غير كافية", msg)
                 err_dialog.exec()
 
-                self.centralWidget().setGraphicsEffect(None)
+                getattr(self, 'content_widget', self.centralWidget()).setGraphicsEffect(None)
                 return
         except: pass
 
@@ -1409,7 +1675,9 @@ class ObyLibraryApp(QMainWindow):
                 safe_act = urllib.parse.quote(item['act'])
                 url = f"{BASE_URL_FILES}/{safe_act}"
                 
-                size = get_remote_size(url)
+                size = self.file_sizes_map.get(item['act'], 0)
+                if size == 0:
+                    size = get_remote_size(url)
                 
                 if size > 0 and os.path.exists(dest) and os.path.getsize(dest) == size:
                     continue
@@ -1429,11 +1697,62 @@ class ObyLibraryApp(QMainWindow):
                 self.emitter.sync_done.emit(True, "اكتمل التحديث بنجاح!")
                 return
 
+            import queue
+            import threading
+            
+            write_queue = queue.Queue(maxsize=50) # Max 100MB RAM buffer
+            write_error = []
+            
+            def global_usb_writer():
+                current_f = None
+                current_tmp_path = None
+                current_dest_path = None
+                try:
+                    while True:
+                        task = write_queue.get()
+                        if task is None:
+                            if current_f: current_f.close()
+                            if current_tmp_path and current_dest_path:
+                                try:
+                                    if os.path.exists(current_dest_path): os.remove(current_dest_path)
+                                    os.rename(current_tmp_path, current_dest_path)
+                                except Exception: pass
+                            break
+                        
+                        mode, filepath, destpath, chunk = task
+                        
+                        if chunk is None:
+                            if current_f:
+                                current_f.close()
+                                current_f = None
+                                if current_tmp_path and current_dest_path:
+                                    try:
+                                        if os.path.exists(current_dest_path): os.remove(current_dest_path)
+                                        os.rename(current_tmp_path, current_dest_path)
+                                    except Exception: pass
+                                current_tmp_path = None
+                                current_dest_path = None
+                            continue
+                            
+                        if current_tmp_path != filepath:
+                            if current_f: current_f.close()
+                            current_f = open(filepath, mode)
+                            current_tmp_path = filepath
+                            current_dest_path = destpath
+                            
+                        current_f.write(chunk)
+                except Exception as e:
+                    write_error.append(e)
+                    if current_f: current_f.close()
+
+            writer_thread = threading.Thread(target=global_usb_writer)
+            writer_thread.start()
+
             start_t = time.time()
             speeds = []
             last_u = time.time()
 
-            for fname, dest, url, size, ex_size, stage_name in q:
+            for i, (fname, dest, url, size, ex_size, stage_name) in enumerate(q):
                 self.emitter.current_stage.emit(stage_name)
                 
                 # التحميل المباشر إلى مسار القلم بدل الـ Temp
@@ -1463,15 +1782,21 @@ class ObyLibraryApp(QMainWindow):
                                 loc = 0
                                 mode = "wb"
                                 
-                            real_size = size
-                            if real_size <= 0:
-                                real_size = int(r.headers.get('content-length', 0))
-                                total_bytes += real_size
+                            content_length = int(r.headers.get('content-length', 0))
+                            actual_remote_size = (loc + content_length) if content_length > 0 else size
                             
-                            with open(usb_tmp_file, mode) as f:
+                            if actual_remote_size > 0 and actual_remote_size != size:
+                                total_bytes += (actual_remote_size - size)
+                                size = actual_remote_size
+                                
+                            real_size = size
+                            
+                            try:
                                 for chunk in r.iter_content(2 * 1024 * 1024):
+                                    if write_error:
+                                        break
                                     if chunk:
-                                        f.write(chunk)
+                                        write_queue.put((mode, usb_tmp_file, dest, chunk))
                                         loc += len(chunk)
                                         down_bytes += len(chunk)
                                         now = time.time()
@@ -1497,27 +1822,27 @@ class ObyLibraryApp(QMainWindow):
                                                 size_str = f"{down_mb:.1f} / {total_mb:.1f} MB"
                                             
                                             speed_str = f"{avg / (1024*1024):.1f} MB/s" if avg > 0 else "0.0 MB/s"
-                                            
                                             self.emitter.progress.emit(pct, self.format_time(rem_t), size_str, speed_str)
                                             last_u = now
-                                            
+                            finally:
+                                write_queue.put((mode, usb_tmp_file, dest, None))
+                                if write_error:
+                                    raise write_error[0]
+
                         self.emitter.net_error.emit(False)
                         break 
                         
                     except (requests.exceptions.RequestException, Exception):
                         if not self.pen_drive or not os.path.exists(self.pen_drive):
+                            write_queue.put(None)
                             self.emitter.sync_done.emit(False, "DISCONNECTED")
                             return
                         self.emitter.net_error.emit(True)
-                        time.sleep(3) 
+                        time.sleep(2)
                         continue
 
-                try:
-                    if os.path.exists(dest): os.remove(dest)
-                    os.rename(usb_tmp_file, dest)
-                except Exception as e:
-                    print(f"Skipped {fname} on copy: {e}")
-                    continue
+            write_queue.put(None)
+            writer_thread.join()
 
             self.emitter.progress.emit(100, "--:--", "", "")
             self.emitter.sync_done.emit(True, "اكتمل التحديث بنجاح!")
@@ -1541,10 +1866,12 @@ class ObyLibraryApp(QMainWindow):
 
     def update_progress(self, pct, time_str, size_str, speed_str):
         self.lbl_time.setText(f"الوقت المتبقي: {time_str}")
+        
         if speed_str == "نقل داخلي":
             self.lbl_speed.setText("جاري النسخ للقلم... ⚡")
         else:
             self.lbl_speed.setText(f"السرعة: {speed_str}")
+                
         self.lbl_size.setText(size_str)
         self.bar.setValue(pct)
         self.lbl_pct.setText(f"{pct}%")
@@ -1580,14 +1907,14 @@ class ObyLibraryApp(QMainWindow):
             # 2. تشغيل تأثير الغبش (Blur) على كامل نافذة البرنامج لتركيز الانتباه
             blur = QGraphicsBlurEffect(self)
             blur.setBlurRadius(15)
-            self.centralWidget().setGraphicsEffect(blur)
+            getattr(self, 'content_widget', self.centralWidget()).setGraphicsEffect(blur)
 
             # 3. عرض شاشة النجاح الرسمية وإرسال قائمة المراحل لها
             success_dialog = SuccessDialog(self, available_stages)
             success_dialog.exec()
             
             # 4. إطفاء تأثير الغبش وإرجاع البرنامج لشكله الطبيعي بعد ضغط "موافق"
-            self.centralWidget().setGraphicsEffect(None)
+            getattr(self, 'content_widget', self.centralWidget()).setGraphicsEffect(None)
             
         else:
             if msg == "DISCONNECTED":
@@ -1602,12 +1929,12 @@ class ObyLibraryApp(QMainWindow):
 
                 blur = QGraphicsBlurEffect(self)
                 blur.setBlurRadius(15)
-                self.centralWidget().setGraphicsEffect(blur)
+                getattr(self, 'content_widget', self.centralWidget()).setGraphicsEffect(blur)
 
                 err_dialog = ErrorDialog(self, "خطأ في الاتصال", "تم فصل القلم أثناء التحديث!\nيرجى توصيل القلم والمحاولة مرة أخرى.")
                 err_dialog.exec()
 
-                self.centralWidget().setGraphicsEffect(None)
+                getattr(self, 'content_widget', self.centralWidget()).setGraphicsEffect(None)
             else:
                 self.lbl_time.setText(f"خطأ: {msg}")
                 self.lbl_time.setStyleSheet("color: #FF3B30; font-weight: bold; font-size: 13px; background:transparent; border:none;")
