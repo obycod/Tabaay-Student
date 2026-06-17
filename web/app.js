@@ -104,7 +104,7 @@ function handleSearch() {
                 searchGrid.innerHTML += `
                     <div class="${itemClass}" style="display:flex; align-items:center; justify-content:space-between; width:100%; cursor:pointer; padding: 12px 16px; border-radius: 16px; background: var(--bg-elevated); border: 1px solid rgba(255,255,255,0.05); margin-bottom: 12px;" id="subj-search-${currentId}" onclick="toggleSubject('${subj.act}', 'cb-search-${currentId}', '${subj.subject.replace(/'/g, "\\'")}', ${subj.size_bytes || 0})">
                         <div style="display:flex; align-items:center; flex:1;">
-                            <img class="subject-img" src="assets/subjects/${safeName}.png" onerror="this.src='https://ui-avatars.com/api/?name=ملزمة&background=282828&color=1DB954'" style="width: 64px; height: 64px; border-radius: 12px; object-fit: cover;">
+                            <img class="subject-img" src="assets/subjects/${safeName}.png?v=${Date.now()}" onerror="this.src='https://ui-avatars.com/api/?name=ملزمة&background=282828&color=1DB954'" style="width: 64px; height: 64px; border-radius: 12px; object-fit: cover;">
                             <div class="subject-info" style="display:flex; flex-direction:column; justify-content:center; margin-right: 16px;">
                                 <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 4px;">
                                     <div class="subject-title" style="margin-bottom: 0;">${subj.subject.replace(/\s*\/\s*/g, ' - ')} ${corruptedBadge}</div>
@@ -251,7 +251,7 @@ function proceedWithSync(selectedFiles) {
         let safeName = file.subject.split('\\').join('-').split('/').join('-').split(':').join('-').trim();
         dlHtml += `
             <div class="dl-item" id="dl-item-${file.act}">
-                <img class="dl-item-img" src="assets/subjects/${safeName}.png" onerror="this.src='https://ui-avatars.com/api/?name=ملزمة&background=282828&color=1DB954'">
+                <img class="dl-item-img" src="assets/subjects/${safeName}.png?v=${Date.now()}" onerror="this.src='https://ui-avatars.com/api/?name=ملزمة&background=282828&color=1DB954'">
                 <div class="dl-item-content">
                     <div class="dl-item-header">
                         <div class="dl-item-title" id="dl-title-${file.act}">${file.subject} (${file.size})</div>
@@ -945,7 +945,7 @@ async function renderStagesGrid() {
                 newHtml += `
                     <div class="card" onclick="handleStageClick('${stage}')" style="${glowStyle} position: relative;">
                         <div class="img-container">
-                            <img src="assets/covers/${safeName}.png" onerror="this.src='https://ui-avatars.com/api/?name=${safeName}&background=282828&color=1DB954'">
+                            <img src="assets/covers/${safeName}.png?v=${Date.now()}" onerror="this.src='https://ui-avatars.com/api/?name=${safeName}&background=282828&color=1DB954'">
                         </div>
                         <h3 style="font-size: 18px; font-weight: 800; text-align: center; margin-bottom: 4px;">${stage}</h3>
                         ${subtitle}
@@ -1216,7 +1216,7 @@ async function loadPenContents() {
 
             groupHtml += `
                 <div class="subject-item" style="position:relative; overflow:hidden; padding: 12px 16px; border-radius: 16px; background: var(--bg-elevated); border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 16px; transition: all 0.2s;" id="pen-item-${f.act}">
-                    <img class="subject-img" src="assets/subjects/${safeName}.png" onerror="this.src='https://ui-avatars.com/api/?name=ملزمة&background=282828&color=1DB954'" style="width: 56px; height: 56px; border-radius: 10px; object-fit: cover;">
+                    <img class="subject-img" src="assets/subjects/${safeName}.png?v=${Date.now()}" onerror="this.src='https://ui-avatars.com/api/?name=ملزمة&background=282828&color=1DB954'" style="width: 56px; height: 56px; border-radius: 10px; object-fit: cover;">
                     <div class="subject-info" style="flex: 1;">
                         <div class="subject-title" style="white-space: normal; line-height: 1.4; font-size: 14px; font-weight: 700; color: var(--text-base); margin-bottom: 6px;">${f.subject.replace(/\s*\/\s*/g, ' - ')}</div>
                         <div style="font-size:12px; color:var(--text-subdued); font-weight:800; background: rgba(255,255,255,0.05); display: inline-block; padding: 2px 8px; border-radius: 6px;">${displaySize.toFixed(1)} MB</div>
