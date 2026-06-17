@@ -13,7 +13,7 @@ import eel
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-APP_VERSION = "6.0"
+APP_VERSION = "6.1"
 BASE_URL_FILES = "http://pdd.xdt.mybluehost.me/update"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -865,7 +865,12 @@ def apply_app_update(download_link):
                                 eel.update_app_progress((downloaded / total_size) * 100)()
                             except: pass
             
-            subprocess.Popen([installer_path, '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'], creationflags=subprocess.CREATE_NO_WINDOW)
+            import ctypes
+            ctypes.windll.shell32.ShellExecuteW(None, "open", installer_path, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', None, 1)
+            try:
+                eel.close_window()()
+            except: pass
+            time.sleep(1)
             os._exit(0)
         except Exception as e:
             print(f"App Update Download Error: {e}")

@@ -9,6 +9,7 @@ Compression=lzma
 SolidCompression=yes
 SetupIconFile=web\icon.ico
 PrivilegesRequired=admin
+CloseApplications=force
 
 [InstallDelete]
 ; مسح أي ملفات قديمة متبقية في مجلد البرنامج لضمان تثبيت نظيف 100%
@@ -29,7 +30,7 @@ Name: "{autodesktop}\تحديث القلم الذكي"; Filename: "{app}\Tabaay_
 Name: "desktopicon"; Description: "إنشاء اختصار على سطح المكتب"; GroupDescription: "اختصارات إضافية:"
 
 [Run]
-Filename: "{app}\Tabaay_Student.exe"; Description: "تشغيل البرنامج الآن"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\Tabaay_Student.exe"; Description: "تشغيل البرنامج الآن"; Flags: nowait postinstall
 
 [Code]
 // هذه الدالة تبحث عن النسخة القديمة في الريجستري وتجلب مسار ملف الحذف

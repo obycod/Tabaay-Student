@@ -1612,3 +1612,10 @@ document.addEventListener('mousedown', (e) => {
         playClickSound();
     }
 });
+
+
+eel.expose(close_window);
+function close_window() {
+    window.close();
+}
+
