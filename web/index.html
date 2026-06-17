@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" translate="no">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google" content="notranslate">
+    <title>مكتبة القلم الذكي</title>
+    <link rel="stylesheet" href="style.css?v=50">
+    <link rel="icon" href="icon.ico" type="image/x-icon">
+    <script type="text/javascript" src="/eel.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</head>
+
+<body oncontextmenu="return false;" class="dark-mode">
+
+    <!-- Splash Screen -->
+    <div id="splash-screen" class="splash-screen">
+        <div class="splash-logo-container">
+            <svg class="splash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+                <path d="M2 2l7.586 7.586"></path>
+                <circle cx="11" cy="11" r="2"></circle>
+            </svg>
+            <h1 class="splash-title">مكتبة القلم الذكي</h1>
+            <p class="splash-subtitle" style="font-weight: 500; font-size: 18px; margin-top: 10px;">المنصة الشاملة
+                لإدارة وتحديث ملازم القلم الذكي</p>
+        </div>
+        <div class="splash-loader"></div>
+
+        <!-- Watermark -->
+        <div
+            style="position: absolute; bottom: 32px; font-size: 14px; font-weight: 700; color: rgba(255, 255, 255, 0.5); display: flex; align-items: center; gap: 6px; pointer-events: none; user-select: none; letter-spacing: 0.5px;">
+            Developed by OBY
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" style="color: var(--brand-color);">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z">
+                </path>
+            </svg>
+        </div>
+    </div>
+
+    <div class="app-container">
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+
+            <!-- Topbar -->
+            <header class="topbar">
+                <div class="top-nav-buttons">
+                    <button class="nav-btn icon-only active" onclick="switchTab('home')" id="tab-home" title="الرئيسية">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                    </button>
+                    <button class="nav-btn with-text" onclick="switchTab('pen')" id="tab-pen" title="محتويات القلم">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="6" y1="2" x2="6" y2="6"></line>
+                            <line x1="18" y1="2" x2="18" y2="6"></line>
+                            <path d="M18 10h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2"></path>
+                            <rect x="6" y="6" width="12" height="8" rx="1"></rect>
+                        </svg>
+                        <span>محتويات القلم</span>
+                    </button>
+                </div>
+
+                <div class="search-box">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-subdued);">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" placeholder="ابحث عن مادة..." id="search-input" onkeyup="handleSearch()">
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <div style="position: relative;">
+                        <button class="nav-btn icon-only" onclick="toggleDownloadsDropdown()" id="tab-downloads"
+                            title="التنزيلات" style="background: rgba(0,0,0,0.5);">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            <div id="dl-active-indicator" class="download-active-indicator" style="display: none;">
+                            </div>
+                        </button>
+
+                        <!-- Downloads Dropdown -->
+                        <div id="downloads-dropdown" class="downloads-dropdown"
+                            style="position: fixed; top: 70px; left: 32px; right: auto; z-index: 1000;">
+                            <div class="dropdown-header">
+                                <h3>التنزيلات</h3>
+                                <button class="close-dropdown" onclick="toggleDownloadsDropdown()">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="dropdown-content">
+                                <div class="empty-downloads" id="empty-downloads">
+                                    لا توجد تنزيلات حالياً.
+                                </div>
+                                <div id="downloads-list" class="downloads-list-container"
+                                    style="display: flex; flex-direction: column; gap: 12px; max-height: 400px; overflow-y: auto;">
+                                    <!-- Download items will be injected here via JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="nav-btn with-text" id="pen-status"
+                        style="cursor: default; background: rgba(0,0,0,0.5); min-width: 130px; justify-content: center; border: 1px solid transparent;">
+                        <span id="pen-text"
+                            style="color: #FF3B30; font-weight: 700; transition: all 0.3s ease; animation: pulseRedText 2s infinite;">القلم
+                            غير متصل</span>
+                    </button>
+
+                    <!-- زر الواي فاي -->
+                    <button class="nav-btn icon-only" id="wifi-status" title="متصل بالإنترنت"
+                        style="cursor: default; color: #1DB954;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+                            <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+                            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+                            <line x1="12" y1="20" x2="12.01" y2="20"></line>
+                        </svg>
+                    </button>
+
+                    <!-- زر التصغير -->
+                    <button class="nav-btn icon-only" onclick="minimizeApp()" title="تصغير البرنامج">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                    </button>
+
+                    <!-- زر الخروج -->
+                    <button class="nav-btn icon-only" onclick="closeApp()" title="خروج من البرنامج"
+                        style="color: #FF3B30;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                            <line x1="12" y1="2" x2="12" y2="12"></line>
+                        </svg>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Views -->
+            <div class="view-container">
+
+                <!-- Home View -->
+                <div id="view-home" class="view active">
+                    <div class="grid" id="stages-grid" style="margin-top: 16px;">
+                        <!-- Stages will be injected here via JS -->
+                    </div>
+                </div>
+
+                <!-- Downloads View -->
+                <div id="view-downloads" class="view">
+                    <h2 class="section-title">قائمة التنزيلات</h2>
+                    <div class="list" id="downloads-list">
+                        <!-- Downloads will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Search View -->
+                <div id="view-search" class="view">
+                    <h2 class="section-title">نتائج البحث عن الملازم</h2>
+                    <div class="list" id="search-results-grid" style="display: flex; flex-direction: column; gap: 8px;">
+                        <!-- Global search results -->
+                    </div>
+                </div>
+
+                <!-- Stage Details View -->
+                <div id="view-stage-details" class="view">
+                    <div
+                        style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+                        <div style="display: flex; align-items: center; gap: 16px;">
+                            <button class="back-btn" onclick="switchTab('home')">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                                    <polyline points="12 19 5 12 12 5"></polyline>
+                                </svg>
+                            </button>
+                            <h2 class="section-title" id="stage-details-title" style="margin-bottom: 0;">تفاصيل المرحلة
+                            </h2>
+                        </div>
+                        <button class="nav-btn" onclick="toggleSelectAll()" title="تحديد الكل"
+                            style="padding: 8px 16px;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                style="vertical-align: middle; margin-left: 6px;">
+                                <polyline points="9 11 12 14 22 4"></polyline>
+                                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                            </svg>
+                            <span style="font-weight: 700; font-size: 14px;">تحديد الكل</span>
+                        </button>
+                    </div>
+                    <div class="list" id="subjects-grid" style="display: flex; flex-direction: column; gap: 8px;">
+                        <!-- Subjects injected here -->
+                    </div>
+                </div>
+
+                <!-- Pen View -->
+                <div id="view-pen" class="view">
+                    <h2 class="section-title">محتويات القلم</h2>
+                    <div class="list" id="pen-grid" style="display: flex; flex-direction: column; gap: 8px;">
+                        <!-- Pen contents -->
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Bottom Bar -->
+    <footer class="bottom-bar"
+        style="display: flex; justify-content: space-between; align-items: center; padding: 0 32px; position: relative; overflow: hidden;">
+
+        <!-- Right Side: Pen Space -->
+        <div style="flex: 1; display: flex; justify-content: flex-start; z-index: 3;">
+            <!-- Pen Space Chart -->
+            <div id="pen-space-container"
+                style="display: none; align-items: center; gap: 14px; cursor: pointer; transition: all 0.2s; padding: 6px 16px; border-radius: 16px;"
+                onclick="showStorageModal()"
+                onmouseover="this.style.background='rgba(255,255,255,0.05)'; this.style.transform='scale(1.02)';"
+                onmouseout="this.style.background='transparent'; this.style.transform='scale(1)';">
+                <!-- Circular Chart -->
+                <div style="position: relative; width: 44px; height: 44px;">
+                    <svg viewBox="0 0 36 36" style="width: 100%; height: 100%; transform: scale(-1, 1);">
+                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3" />
+                        <path id="pen-space-circle" stroke-dasharray="0, 100"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            fill="none" stroke="#1DB954" stroke-width="3"
+                            style="transition: stroke-dasharray 0.5s ease;" />
+                    </svg>
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 11px; font-weight: 800; color: var(--text-base);"
+                        id="pen-space-pct">0%</div>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                    <div style="font-size: 12px; font-weight: 700; color: var(--text-subdued); margin-bottom: 2px;">
+                        مساحة القلم</div>
+                    <div style="font-size: 14px; font-weight: 800; color: var(--brand-color);" id="pen-space-text">0.0 /
+                        0.0 GB</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center: Spacer -->
+        <div style="flex: 2;"></div>
+
+        <!-- Left Side: Button -->
+        <div style="flex: 1; display: flex; justify-content: flex-end; align-items: center; z-index: 3;">
+            <button class="sync-btn" id="sync-btn" onclick="startSync()">بدء التحديث</button>
+        </div>
+
+        <!-- Global Dashboard (Syncing) -->
+        <div id="global-dl-view"
+            style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-dark); display: flex; align-items: center; justify-content: center; z-index: 1; opacity: 0; pointer-events: none; transition: opacity 0.4s; border-top: 1px solid rgba(255,255,255,0.05); cursor: pointer;" onclick="toggleDownloadsDropdown()">
+            <div
+                style="display: flex; flex-direction: column; width: 100%; max-width: 650px; padding-left: 100px; gap: 8px;">
+
+                <!-- Main Row: ETA | Bar | Pct -->
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <!-- ETA (Right) -->
+                    <div id="g-dl-eta"
+                        style="font-size: 13px; font-weight: 700; color: var(--text-base); width: 85px; text-align: right; white-space: nowrap;">
+                        00:00 متبقي</div>
+
+                    <!-- Progress Bar -->
+                    <div
+                        style="flex: 1; position: relative; height: 16px; background: rgba(0,0,0,0.6); border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);">
+                        <div id="g-dl-progress-fill" class="pulsating-bar" style="width: 0%;"></div>
+                    </div>
+
+                    <!-- Percentage (Left) -->
+                    <div id="g-dl-pct"
+                        style="font-size: 16px; font-weight: 900; color: var(--brand-color); width: 45px; text-align: left; white-space: nowrap;">
+                        0%</div>
+                </div>
+
+                <!-- Bottom Row: Speed & Sizes -->
+                <div
+                    style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--text-subdued); margin-right: 101px; margin-left: 61px;">
+                    <div id="g-dl-speed" style="color: var(--brand-color);">0.0 MB/s</div>
+                    <div id="g-dl-sizes">0.0 / 0.0 MB</div>
+                </div>
+
+            </div>
+        </div>
+    </footer>
+
+    <!-- Insufficient Space Modal -->
+    <div id="space-modal"
+        style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+        <div
+            style="background: var(--bg-elevated); padding: 32px; border-radius: 24px; border: 1px solid rgba(255,59,48,0.3); width: 100%; max-width: 480px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); text-align: center;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round"
+                style="margin-bottom: 16px; filter: drop-shadow(0 0 8px rgba(255,59,48,0.5));">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                </path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <h2 style="color: var(--text-base); font-size: 24px; margin-bottom: 8px;">المساحة غير كافية!</h2>
+            <p style="color: var(--text-subdued); font-size: 15px; margin-bottom: 24px; line-height: 1.5;"
+                id="space-modal-msg">
+                أنت تحاول تحميل ملفات بحجم X، لكن المساحة المتبقية في القلم هي Y فقط.
+            </p>
+            <div style="display: flex; gap: 16px; justify-content: center;">
+                <button onclick="document.getElementById('space-modal').style.display='none'; switchTab('pen');"
+                    style="background: var(--brand-color); color: #000; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 800; cursor: pointer; transition: all 0.2s;">
+                    الذهاب لتفريغ مساحة
+                </button>
+                <button onclick="document.getElementById('space-modal').style.display='none';"
+                    style="background: rgba(255,255,255,0.1); color: var(--text-base); border: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                    إلغاء الأمر
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Confirm Modal -->
+    <div id="confirm-modal"
+        style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+        <div
+            style="background: var(--bg-elevated); padding: 32px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); width: 100%; max-width: 480px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); text-align: center;">
+            <svg id="confirm-icon" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FF3B30"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                style="margin-bottom: 16px; filter: drop-shadow(0 0 8px rgba(255,59,48,0.5));">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            <h2 id="confirm-title" style="color: var(--text-base); font-size: 24px; margin-bottom: 8px;">تأكيد الحذف
+            </h2>
+            <p style="color: var(--text-subdued); font-size: 15px; margin-bottom: 24px; line-height: 1.5;"
+                id="confirm-msg">
+                هل أنت متأكد من الحذف؟
+            </p>
+            <div style="display: flex; gap: 16px; justify-content: center;">
+                <button id="confirm-yes-btn"
+                    style="background: rgba(255, 59, 48, 0.1); color: #FF3B30; border: 1px solid rgba(255, 59, 48, 0.3); padding: 12px 24px; border-radius: 12px; font-weight: 800; cursor: pointer; transition: all 0.2s;">
+                    نعم، احذف
+                </button>
+                <button onclick="document.getElementById('confirm-modal').style.display='none';"
+                    style="background: rgba(255,255,255,0.1); color: var(--text-base); border: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                    إلغاء الأمر
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Alert Modal -->
+    <div id="alert-modal"
+        style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+        <div
+            style="background: var(--bg-elevated); padding: 32px; border-radius: 24px; border: 1px solid rgba(255,149,0,0.3); width: 100%; max-width: 480px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); text-align: center;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FF9500" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round"
+                style="margin-bottom: 16px; filter: drop-shadow(0 0 8px rgba(255,149,0,0.5));">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <h2 id="alert-title" style="color: var(--text-base); font-size: 24px; margin-bottom: 8px;">تنبيه</h2>
+            <p style="color: var(--text-subdued); font-size: 15px; margin-bottom: 24px; line-height: 1.5;"
+                id="alert-msg">
+                رسالة التنبيه
+            </p>
+            <div style="display: flex; justify-content: center;">
+                <button id="alert-ok-btn" onclick="closeAlertModal()"
+                    style="background: var(--brand-color); color: #000; border: none; padding: 12px 32px; border-radius: 12px; font-weight: 800; cursor: pointer; transition: all 0.2s;">
+                    حسناً فهمت
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Storage Details Modal -->
+    <div id="storage-modal"
+        style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+        <div
+            style="background: var(--bg-elevated); padding: 32px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); width: 100%; max-width: 480px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); text-align: center;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2 style="color: var(--text-base); font-size: 22px; margin: 0;">تفاصيل المساحة</h2>
+                <button class="nav-btn icon-only" onclick="closeStorageModal()" style="color: var(--text-subdued);"><svg
+                        width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg></button>
+            </div>
+
+            <div style="display: flex; justify-content: center; margin-bottom: 32px; position: relative;">
+                <div style="width: 160px; height: 160px; position: relative;">
+                    <svg viewBox="0 0 36 36" style="width: 100%; height: 100%; transform: scale(-1, 1);">
+                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3" />
+                        <path id="modal-storage-circle" stroke-dasharray="0, 100"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            fill="none" stroke="#1DB954" stroke-width="3"
+                            style="transition: stroke-dasharray 1s ease-out;" />
+                    </svg>
+                    <div
+                        style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center;">
+                        <span id="modal-storage-pct"
+                            style="font-size: 32px; font-weight: 800; color: var(--text-base);">0%</span>
+                        <span style="font-size: 12px; font-weight: 700; color: var(--text-subdued);">مستخدمة</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                <div
+                    style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="font-size: 13px; color: var(--text-subdued); font-weight: 700; margin-bottom: 8px;">
+                        المساحة الكلية</div>
+                    <div id="modal-storage-total" style="font-size: 20px; font-weight: 800; color: var(--text-base);">
+                        0.0 GB</div>
+                </div>
+                <div
+                    style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
+                    <div style="font-size: 13px; color: var(--text-subdued); font-weight: 700; margin-bottom: 8px;">
+                        المساحة المتبقية</div>
+                    <div id="modal-storage-free" style="font-size: 20px; font-weight: 800; color: #1DB954;">0.0 GB</div>
+                </div>
+            </div>
+
+            <p style="font-size: 13px; color: var(--text-subdued); font-weight: 600; line-height: 1.5; margin: 0;">
+                نصيحة: يفضل إبقاء مساحة فارغة لا تقل عن 1GB لتجنب المشاكل أثناء تحديث الملازم الجديدة.</p>
+        </div>
+    </div>
+
+    <!-- Success Modal (اكتمال التحديث) -->
+    <div id="success-modal"
+        style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
+        <div
+            style="background: var(--bg-elevated); padding: 40px 32px; border-radius: 28px; border: 1px solid rgba(29,185,84,0.4); width: 100%; max-width: 480px; box-shadow: 0 0 60px rgba(29,185,84,0.25), 0 10px 40px rgba(0,0,0,0.6); text-align: center; animation: successPop 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards;">
+            <!-- أيقونة الاكتمال -->
+            <div
+                style="width: 80px; height: 80px; border-radius: 50%; background: rgba(29,185,84,0.15); border: 2px solid rgba(29,185,84,0.5); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; filter: drop-shadow(0 0 16px rgba(29,185,84,0.5));">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#1DB954" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+            </div>
+            <h2 id="success-modal-title"
+                style="color: #1DB954; font-size: 26px; font-weight: 900; margin-bottom: 10px;">اكتمل التحديث!</h2>
+            <p id="success-modal-msg"
+                style="color: var(--text-subdued); font-size: 15px; margin-bottom: 28px; line-height: 1.6;">تم تحميل
+                وتحديث جميع الملازم بنجاح 🚀</p>
+            <button onclick="closeSuccessModal()"
+                style="background: var(--brand-color); color: #000; border: none; padding: 14px 48px; border-radius: 32px; font-size: 17px; font-weight: 900; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 20px rgba(29,185,84,0.4);">
+                موافق
+            </button>
+        </div>
+    </div>
+
+    <!-- Anti-Inspect Scripts -->
+    <script>
+        // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, F5, Ctrl+R
+        document.onkeydown = function (e) {
+            if (event.keyCode == 123) { return false; }
+            if (e.ctrlKey && e.shiftKey && e.keyCode == 'I'.charCodeAt(0)) { return false; }
+            if (e.ctrlKey && e.shiftKey && e.keyCode == 'C'.charCodeAt(0)) { return false; }
+            if (e.ctrlKey && e.shiftKey && e.keyCode == 'J'.charCodeAt(0)) { return false; }
+            if (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) { return false; }
+            if (e.ctrlKey && e.keyCode == 'R'.charCodeAt(0)) { return false; }
+            if (event.keyCode == 116) { return false; } // F5
+        }
+    </script>
+    <script>
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                if (splash) {
+                    splash.classList.add('hidden');
+                    setTimeout(() => splash.remove(), 500); // completely remove it
+                }
+            }, 2000); // 2 seconds delay
+        });
+    </script>
+
+    <script src="app.js?v=50"></script>
+
+    <!-- Update Modal -->
+    <div id="update-modal"
+        style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); 
+        z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
+        <div style="background: var(--bg-elevated); padding: 40px; border-radius: 24px; border: 1px solid rgba(29,185,84,0.3); width: 100%; max-width: 500px; text-align: center;">
+            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#1DB954" stroke-width="2" style="margin-bottom: 20px; animation: spin 2s linear infinite;">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 2a10 10 0 0 1 10 10"></path>
+            </svg>
+            <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
+            <h2 id="update-title" style="color: white; margin-bottom: 10px; font-family: 'Tajawal', sans-serif;">جاري تحديث النظام...</h2>
+            <p style="color: var(--text-subdued); margin-bottom: 20px; font-family: 'Tajawal', sans-serif;">يوجد إصدار جديد، جاري التحميل يرجى عدم إغلاق البرنامج.</p>
+            <div style="width: 100%; background: rgba(255,255,255,0.1); border-radius: 10px; height: 10px; overflow: hidden; margin-bottom: 10px;">
+                <div id="update-progress-bar" style="width: 0%; height: 100%; background: #1DB954; transition: width 0.3s;"></div>
+            </div>
+            <p id="update-progress-text" style="color: #1DB954; font-weight: bold; font-family: 'Tajawal', sans-serif;">0%</p>
+        </div>
+    </div>
+</body>
+
+
+</html>

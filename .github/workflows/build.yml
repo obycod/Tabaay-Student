@@ -30,8 +30,9 @@ jobs:
 
     - name: تشفير الكود وتحويل البرنامج إلى EXE
       run: |
-        # 1. تشفير كود البايثون باستخدام PyArmor
-        pyarmor gen -O obf_dist main.py
+        # 1. تجاوز تشفير PyArmor (النسخة المجانية تمنع العمل على GitHub Actions وتعطي out of license)
+        New-Item -ItemType Directory -Force -Path obf_dist
+        Copy-Item -Path "backend.py" -Destination "obf_dist\backend.py"
         # 2. نسخ مجلد الواجهة ومحتوياته إلى المجلد المشفر
         Copy-Item -Path "web" -Destination "obf_dist\web" -Recurse
         # 3. تشويش وضغط واجهة الويب (HTML/JS/CSS) لمنع سرقتها
@@ -39,7 +40,7 @@ jobs:
         html-minifier-terser --collapse-whitespace --remove-comments --minify-js true --minify-css true -o "obf_dist\web\index.html" "obf_dist\web\index.html"
         # 4. بناء البرنامج كـ (مجلد) وليس ملف واحد لتسريع الفتح بشكل مضاعف
         Set-Location obf_dist
-        python -m eel main.py web --onedir --noconsole --hidden-import eel --hidden-import requests --hidden-import concurrent.futures --hidden-import winsound --hidden-import tkinter --hidden-import subprocess --hidden-import shutil --hidden-import base64 --name "Tabaay_Student" --icon=web/icon.ico
+        python -m eel backend.py web --onedir --noconsole --hidden-import eel --hidden-import requests --hidden-import concurrent.futures --hidden-import winsound --hidden-import tkinter --hidden-import subprocess --hidden-import shutil --hidden-import base64 --name "Tabaay_Student" --icon=web/icon.ico
         # 5. نقل مجلد البرنامج النهائي للمسار الأصلي ليتعرف عليه Inno Setup
         Set-Location ..
         New-Item -ItemType Directory -Force -Path dist
@@ -52,7 +53,7 @@ jobs:
     - name: تجهيز ملفات التحديث للرفع
       run: |
         # استخراج رقم الإصدار آلياً من ملف البايثون
-        $content = Get-Content main.py -Raw
+        $content = Get-Content backend.py -Raw
         if ($content -match 'APP_VERSION\s*=\s*"([^"]+)"') {
             $version = $matches[1]
             # الرابط المباشر للبرنامج على سيرفرك
@@ -65,7 +66,27 @@ jobs:
             exit 1
         }
 
-    - name: الرفع التلقائي إلى سيرفر Bluehost عبر FTP
+    - name: توليد ملف الهاش للصور
+      run: |
+        $assetsDir = "web\assets"
+        $hashDict = @{}
+        Get-ChildItem -Path $assetsDir -File -Recurse | ForEach-Object {
+            $relativePath = $_.FullName.Substring((Resolve-Path $assetsDir).Path.Length + 1).Replace('\', '/')
+            $hash = (Get-FileHash $_.FullName -Algorithm MD5).Hash.ToLower()
+            $hashDict[$relativePath] = $hash
+        }
+        $hashDict | ConvertTo-Json -Depth 10 | Out-File -FilePath "$assetsDir\assets_hash.json" -Encoding UTF8
+
+    - name: الرفع التلقائي للصور إلى سيرفر Bluehost عبر FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./web/assets/
+        server-dir: /update_Student/assets/
+
+    - name: الرفع التلقائي للبرنامج إلى سيرفر Bluehost عبر FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.5
       with:
         server: ${{ secrets.FTP_SERVER }}

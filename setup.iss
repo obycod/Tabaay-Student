@@ -18,6 +18,9 @@ Type: filesandordirs; Name: "{app}\*"
 Source: "dist\Tabaay_Student\Tabaay_Student.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\Tabaay_Student\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
+[Dirs]
+Name: "{app}\web\assets"; Permissions: users-modify
+
 [Icons]
 Name: "{group}\تحديث القلم الذكي"; Filename: "{app}\Tabaay_Student.exe"
 Name: "{autodesktop}\تحديث القلم الذكي"; Filename: "{app}\Tabaay_Student.exe"; Tasks: desktopicon
