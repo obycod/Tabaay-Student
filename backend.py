@@ -13,7 +13,7 @@ import eel
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-APP_VERSION = "6.1"
+APP_VERSION = "6.2"
 BASE_URL_FILES = "http://pdd.xdt.mybluehost.me/update"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -865,12 +865,23 @@ def apply_app_update(download_link):
                                 eel.update_app_progress((downloaded / total_size) * 100)()
                             except: pass
             
-            import ctypes
-            ctypes.windll.shell32.ShellExecuteW(None, "open", installer_path, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', None, 1)
-            try:
-                eel.close_window()()
-            except: pass
-            time.sleep(1)
+            # إنشاء سكربت تحديث لضمان إغلاق كل شيء وتشغيل التنصيب بصمت
+            updater_bat = os.path.join(temp_dir, "updater.bat")
+            updater_vbs = os.path.join(temp_dir, "updater.vbs")
+            my_pid = os.getpid()
+            
+            with open(updater_bat, "w", encoding="utf-8") as f:
+                f.write("@echo off\n")
+                f.write("timeout /t 2 /nobreak > NUL\n")
+                f.write(f"taskkill /F /T /PID {my_pid} > NUL 2>&1\n")
+                f.write("taskkill /F /IM Tabaay_Student.exe > NUL 2>&1\n")
+                f.write(f'"{installer_path}" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART\n')
+
+            with open(updater_vbs, "w", encoding="utf-8") as f:
+                f.write(f'CreateObject("WScript.Shell").Run """{updater_bat}""", 0, False\n')
+
+            import os
+            os.startfile(updater_vbs)
             os._exit(0)
         except Exception as e:
             print(f"App Update Download Error: {e}")
