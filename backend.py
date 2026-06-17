@@ -13,7 +13,7 @@ import eel
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-APP_VERSION = "6.3"
+APP_VERSION = "6.4"
 BASE_URL_FILES = "http://pdd.xdt.mybluehost.me/update"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -852,9 +852,17 @@ def apply_app_update(download_link):
         try:
             h = HEADERS.copy()
             h["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            
+            total_size = 0
+            try:
+                head_r = requests.head(f"{download_link}?rnd={time.time()}", headers=h, timeout=10, allow_redirects=True)
+                total_size = int(head_r.headers.get('content-length', 0))
+            except: pass
+            
             with requests.get(f"{download_link}?rnd={time.time()}", headers=h, stream=True, timeout=30) as r:
                 r.raise_for_status()
-                total_size = int(r.headers.get('content-length', 0))
+                if total_size == 0:
+                    total_size = int(r.headers.get('content-length', 0))
                 downloaded = 0
                 with open(installer_path, 'wb') as f:
                     for chunk in r.iter_content(chunk_size=1024*1024):
