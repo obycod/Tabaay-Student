@@ -15,7 +15,7 @@ import eel
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-APP_VERSION = "7.6"
+APP_VERSION = "7.7"
 BASE_URL_FILES = "http://pdd.xdt.mybluehost.me/update"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -840,28 +840,26 @@ def check_app_update():
 
 @eel.expose
 def apply_app_update(download_link):
-    # Hardcode the link to avoid any parsing issues from the text file
     download_link = "https://app.altabaay.co/update_Student/Tabaay_Student_Setup.exe"
     
     def _download_and_install():
+        try:
+            temp_dir = os.getenv('TEMP', os.path.expanduser("~"))
+            installer_path = os.path.join(temp_dir, "Tabaay_Student_Setup_New.exe")
             
-            with requests.get(f"{download_link}?rnd={time.time()}", headers=h, stream=True, timeout=30, verify=False) as r:
-                r.raise_for_status()
-                if total_size == 0:
-                    total_size = int(r.headers.get('content-length', 0))
-                downloaded = 0
-                with open(installer_path, 'wb') as f:
-                    for chunk in r.iter_content(chunk_size=1024*1024):
-                        f.write(chunk)
-                        downloaded += len(chunk)
-                        try:
-                            if total_size > 0:
-                                eel.update_app_progress((downloaded / total_size) * 100, None)()
-                            else:
-                                eel.update_app_progress(None, downloaded / (1024 * 1024))()
-                        except: pass
+            if os.path.exists(installer_path):
+                try: os.remove(installer_path)
+                except: pass
             
-            # إنشاء سكربت تحديث لضمان إغلاق كل شيء وتشغيل التنصيب بصمت
+            h = HEADERS.copy()
+            h["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            
+            r = requests.get(f"{download_link}?rnd={time.time()}", headers=h, timeout=120, verify=False)
+            r.raise_for_status()
+            
+            with open(installer_path, 'wb') as f:
+                f.write(r.content)
+            
             updater_bat = os.path.join(temp_dir, "updater.bat")
             updater_vbs = os.path.join(temp_dir, "updater.vbs")
             my_pid = os.getpid()
@@ -876,16 +874,12 @@ def apply_app_update(download_link):
             with open(updater_vbs, "w", encoding="utf-8") as f:
                 f.write(f'CreateObject("WScript.Shell").Run """{updater_bat}""", 0, False\n')
 
-            import os
             os.startfile(updater_vbs)
             os._exit(0)
         except Exception as e:
             print(f"App Update Download Error: {e}")
-            try:
-                eel.app_update_failed()()
-            except: pass
             
-    eel.spawn(_download_and_install)
+    threading.Thread(target=_download_and_install, daemon=True).start()
 
 @eel.expose
 def sync_images_background():
