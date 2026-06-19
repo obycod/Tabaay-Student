@@ -1,10 +1,12 @@
+import gevent.monkey
+gevent.monkey.patch_all()
 import os
 import sys
 import json
 import time
 import string
 import shutil
-# إزالة gevent بالكامل - نعتمد على threading القياسي فقط لتجنب التعارضات
+# تم استرجاع gevent لحل مشكلة wsgiref
 import threading
 import queue
 import requests
@@ -13,7 +15,7 @@ import eel
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-APP_VERSION = "7.3"
+APP_VERSION = "7.4"
 BASE_URL_FILES = "http://pdd.xdt.mybluehost.me/update"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
