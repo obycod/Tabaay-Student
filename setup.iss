@@ -1,6 +1,6 @@
 [Setup]
 AppName=تحديث القلم الذكي
-AppVersion=5.1
+AppVersion=8.4
 DefaultDirName={autopf}\AlTabaayStudent
 DefaultGroupName=Al-Tabaay
 OutputDir=Output

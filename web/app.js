@@ -1028,7 +1028,7 @@ function openStage(stageName) {
         html += `
             <div class="${itemClass}" style="display:flex; align-items:center; justify-content:space-between; width:100%; ${cursorStyle} padding: 12px 16px; border-radius: 16px; background: var(--bg-elevated); border: 1px solid rgba(255,255,255,0.05); margin-bottom: 12px;" id="subj-${index}" onclick="toggleSubject('${subj.act}', 'cb-${index}', '${subj.subject.replace(/'/g, "\\'")}', ${subj.size_bytes || 0})">
                 <div style="display:flex; align-items:center; flex:1;">
-                    <img class="subject-img" src="assets/subjects/${safeName}.png" onerror="this.src='https://ui-avatars.com/api/?name=ملزمة&background=282828&color=1DB954'" style="width: 64px; height: 64px; border-radius: 12px; object-fit: cover;">
+                    <img class="subject-img" src="assets/subjects/${safeName}.png?v=${Date.now()}" onerror="this.src='https://ui-avatars.com/api/?name=ملزمة&background=282828&color=1DB954'" style="width: 64px; height: 64px; border-radius: 12px; object-fit: cover;">
                     <div class="subject-info" style="display:flex; flex-direction:column; justify-content:center; margin-right: 16px;">
                         <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 4px;">
                             <div class="subject-title" style="margin-bottom: 0;">${subj.subject.replace(/\s*\/\s*/g, ' - ')} ${corruptedBadge}</div>

@@ -15,7 +15,7 @@ import eel
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-APP_VERSION = "8.3"
+APP_VERSION = "8.4"
 BASE_URL_FILES = "http://pdd.xdt.mybluehost.me/update"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -826,7 +826,7 @@ def check_app_update():
         h["Cache-Control"] = "no-cache, no-store, must-revalidate"
         h["Pragma"] = "no-cache"
         h["Expires"] = "0"
-        r = requests.get(f"{url}?rnd={time.time()}", headers=h, timeout=7)
+        r = requests.get(f"{url}?rnd={time.time()}", headers=h, timeout=7, verify=False)
         if r.status_code == 200:
             lines = r.text.strip().splitlines()
             if lines and len(lines) >= 2:
@@ -910,7 +910,7 @@ def sync_images_background():
             url = "https://app.altabaay.co/update_Student/assets/assets_hash.json"
             h = HEADERS.copy()
             h["Cache-Control"] = "no-cache, no-store, must-revalidate"
-            r = requests.get(f"{url}?rnd={time.time()}", headers=h, timeout=10)
+            r = requests.get(f"{url}?rnd={time.time()}", headers=h, timeout=10, verify=False)
             if r.status_code == 200:
                 remote_hashes = r.json()
                 
@@ -933,7 +933,7 @@ def sync_images_background():
                     if needs_download:
                         os.makedirs(os.path.dirname(local_file), exist_ok=True)
                         img_url = f"https://app.altabaay.co/update_Student/assets/{relative_path}?rnd={time.time()}"
-                        img_r = requests.get(img_url, headers=h, timeout=15)
+                        img_r = requests.get(img_url, headers=h, timeout=15, verify=False)
                         if img_r.status_code == 200:
                             with open(local_file, "wb") as f:
                                 f.write(img_r.content)
