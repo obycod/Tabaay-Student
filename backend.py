@@ -13,11 +13,12 @@ import eel
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-APP_VERSION = "6.7"
+APP_VERSION = "6.8"
 BASE_URL_FILES = "http://pdd.xdt.mybluehost.me/update"
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    "Accept": "*/*"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+    "Connection": "keep-alive"
 }
 
 # مجلد مؤقت محلي على جهاز الكمبيوتر لتسريع التحميل
