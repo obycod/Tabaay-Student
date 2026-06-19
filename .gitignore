@@ -4,3 +4,7 @@ build/
 obf_dist/
 Output/
 
+
+__pycache__/*
+Thumbs.db
+*.spec
