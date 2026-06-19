@@ -15,7 +15,7 @@ import eel
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-APP_VERSION = "7.8"
+APP_VERSION = "7.9"
 BASE_URL_FILES = "http://pdd.xdt.mybluehost.me/update"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -854,11 +854,28 @@ def apply_app_update(download_link):
             h = HEADERS.copy()
             h["Cache-Control"] = "no-cache, no-store, must-revalidate"
             
-            r = requests.get(f"{download_link}?rnd={time.time()}", headers=h, timeout=120, verify=False)
-            r.raise_for_status()
+            total_size = 0
+            try:
+                head_r = requests.head(f"{download_link}?rnd={time.time()}", headers=h, timeout=10, allow_redirects=True, verify=False)
+                total_size = int(head_r.headers.get('content-length', 0))
+            except: pass
             
-            with open(installer_path, 'wb') as f:
-                f.write(r.content)
+            with requests.get(f"{download_link}?rnd={time.time()}", headers=h, stream=True, timeout=30, verify=False) as r:
+                r.raise_for_status()
+                if total_size == 0:
+                    total_size = int(r.headers.get('content-length', 0))
+                downloaded = 0
+                with open(installer_path, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=1024*1024):
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        try:
+                            if total_size > 0:
+                                # Fire-and-forget: No trailing () to prevent deadlock!
+                                eel.update_app_progress((downloaded / total_size) * 100, None)
+                            else:
+                                eel.update_app_progress(None, downloaded / (1024 * 1024))
+                        except: pass
             
             updater_bat = os.path.join(temp_dir, "updater.bat")
             updater_vbs = os.path.join(temp_dir, "updater.vbs")
@@ -875,9 +892,14 @@ def apply_app_update(download_link):
                 f.write(f'CreateObject("WScript.Shell").Run """{updater_bat}""", 0, False\n')
 
             os.startfile(updater_vbs)
+            
+            try: eel.close_window()()
+            except: pass
             os._exit(0)
         except Exception as e:
             print(f"App Update Download Error: {e}")
+            try: eel.app_update_failed()()
+            except: pass
             
     threading.Thread(target=_download_and_install, daemon=True).start()
 

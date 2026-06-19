@@ -1,4 +1,8 @@
 // ===== DOM Elements =====
+eel.expose(close_window);
+function close_window() {
+    window.close();
+}
 const views = document.querySelectorAll('.view');
 const tabs = document.querySelectorAll('.nav-links li');
 const stagesGrid = document.getElementById('stages-grid');
