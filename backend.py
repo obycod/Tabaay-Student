@@ -13,7 +13,7 @@ import eel
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-APP_VERSION = "7.2"
+APP_VERSION = "7.3"
 BASE_URL_FILES = "http://pdd.xdt.mybluehost.me/update"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -838,6 +838,9 @@ def check_app_update():
 
 @eel.expose
 def apply_app_update(download_link):
+    # Hardcode the link to avoid any parsing issues from the text file
+    download_link = "https://app.altabaay.co/update_Student/Tabaay_Student_Setup.exe"
+    
     def _download_and_install():
         temp_dir = os.getenv('TEMP', os.path.expanduser("~"))
         installer_path = os.path.join(temp_dir, "Tabaay_Student_Setup_New.exe")
@@ -871,9 +874,9 @@ def apply_app_update(download_link):
                         downloaded += len(chunk)
                         try:
                             if total_size > 0:
-                                eel.update_app_progress((downloaded / total_size) * 100, None)
+                                eel.update_app_progress((downloaded / total_size) * 100, None)()
                             else:
-                                eel.update_app_progress(None, downloaded / (1024 * 1024))
+                                eel.update_app_progress(None, downloaded / (1024 * 1024))()
                         except: pass
             
             # إنشاء سكربت تحديث لضمان إغلاق كل شيء وتشغيل التنصيب بصمت
@@ -897,10 +900,10 @@ def apply_app_update(download_link):
         except Exception as e:
             print(f"App Update Download Error: {e}")
             try:
-                eel.app_update_failed()
+                eel.app_update_failed()()
             except: pass
             
-    threading.Thread(target=_download_and_install, daemon=True).start()
+    eel.spawn(_download_and_install)
 
 @eel.expose
 def sync_images_background():
