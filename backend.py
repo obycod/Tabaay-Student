@@ -15,7 +15,7 @@ import eel
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-APP_VERSION = "7.5"
+APP_VERSION = "7.6"
 BASE_URL_FILES = "http://pdd.xdt.mybluehost.me/update"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -844,26 +844,6 @@ def apply_app_update(download_link):
     download_link = "https://app.altabaay.co/update_Student/Tabaay_Student_Setup.exe"
     
     def _download_and_install():
-        temp_dir = os.getenv('TEMP', os.path.expanduser("~"))
-        installer_path = os.path.join(temp_dir, "Tabaay_Student_Setup_New.exe")
-        
-        if os.path.exists(installer_path):
-            for _ in range(5):
-                try:
-                    os.remove(installer_path)
-                    break
-                except OSError:
-                    time.sleep(0.5)
-                    
-        try:
-            h = HEADERS.copy()
-            h["Cache-Control"] = "no-cache, no-store, must-revalidate"
-            
-            total_size = 0
-            try:
-                head_r = requests.head(f"{download_link}?rnd={time.time()}", headers=h, timeout=10, allow_redirects=True, verify=False)
-                total_size = int(head_r.headers.get('content-length', 0))
-            except: pass
             
             with requests.get(f"{download_link}?rnd={time.time()}", headers=h, stream=True, timeout=30, verify=False) as r:
                 r.raise_for_status()
