@@ -1543,12 +1543,17 @@ window.addEventListener('offline', updateWifiStatus);
 // ===== Start =====
 
 eel.expose(update_app_progress);
-function update_app_progress(percent) {
-    let p = Math.floor(percent);
+function update_app_progress(percent, downloaded_mb) {
     let bar = document.getElementById('update-progress-bar');
     let text = document.getElementById('update-progress-text');
-    if(bar) bar.style.width = p + '%';
-    if(text) text.innerText = p + '%';
+    if (percent !== null) {
+        let p = Math.floor(percent);
+        if(bar) bar.style.width = p + '%';
+        if(text) text.innerText = p + '%';
+    } else {
+        if(bar) bar.style.width = '100%';
+        if(text) text.innerText = Math.floor(downloaded_mb) + ' MB / مجهول';
+    }
 }
 
 eel.expose(app_update_failed);

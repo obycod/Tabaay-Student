@@ -13,7 +13,7 @@ import eel
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-APP_VERSION = "6.5"
+APP_VERSION = "6.6"
 BASE_URL_FILES = "http://pdd.xdt.mybluehost.me/update"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -868,10 +868,12 @@ def apply_app_update(download_link):
                     for chunk in r.iter_content(chunk_size=1024*1024):
                         f.write(chunk)
                         downloaded += len(chunk)
-                        if total_size > 0:
-                            try:
-                                eel.update_app_progress((downloaded / total_size) * 100)()
-                            except: pass
+                        try:
+                            if total_size > 0:
+                                eel.update_app_progress((downloaded / total_size) * 100, None)()
+                            else:
+                                eel.update_app_progress(None, downloaded / (1024 * 1024))()
+                        except: pass
             
             # إنشاء سكربت تحديث لضمان إغلاق كل شيء وتشغيل التنصيب بصمت
             updater_bat = os.path.join(temp_dir, "updater.bat")
