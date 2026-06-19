@@ -13,7 +13,7 @@ import eel
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-APP_VERSION = "7.0"
+APP_VERSION = "7.1"
 BASE_URL_FILES = "http://pdd.xdt.mybluehost.me/update"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -856,11 +856,11 @@ def apply_app_update(download_link):
             
             total_size = 0
             try:
-                head_r = requests.head(f"{download_link}?rnd={time.time()}", headers=h, timeout=10, allow_redirects=True)
+                head_r = requests.head(f"{download_link}?rnd={time.time()}", headers=h, timeout=10, allow_redirects=True, verify=False)
                 total_size = int(head_r.headers.get('content-length', 0))
             except: pass
             
-            with requests.get(f"{download_link}?rnd={time.time()}", headers=h, stream=True, timeout=30) as r:
+            with requests.get(f"{download_link}?rnd={time.time()}", headers=h, stream=True, timeout=30, verify=False) as r:
                 r.raise_for_status()
                 if total_size == 0:
                     total_size = int(r.headers.get('content-length', 0))
@@ -871,9 +871,9 @@ def apply_app_update(download_link):
                         downloaded += len(chunk)
                         try:
                             if total_size > 0:
-                                eel.update_app_progress((downloaded / total_size) * 100, None)()
+                                eel.update_app_progress((downloaded / total_size) * 100, None)
                             else:
-                                eel.update_app_progress(None, downloaded / (1024 * 1024))()
+                                eel.update_app_progress(None, downloaded / (1024 * 1024))
                         except: pass
             
             # إنشاء سكربت تحديث لضمان إغلاق كل شيء وتشغيل التنصيب بصمت
@@ -897,7 +897,7 @@ def apply_app_update(download_link):
         except Exception as e:
             print(f"App Update Download Error: {e}")
             try:
-                eel.app_update_failed()()
+                eel.app_update_failed()
             except: pass
             
     threading.Thread(target=_download_and_install, daemon=True).start()
