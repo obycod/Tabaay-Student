@@ -15,7 +15,7 @@ import eel
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-APP_VERSION = "8.2"
+APP_VERSION = "8.3"
 BASE_URL_FILES = "http://pdd.xdt.mybluehost.me/update"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -938,6 +938,16 @@ def sync_images_background():
                             with open(local_file, "wb") as f:
                                 f.write(img_r.content)
                                 
+                # تنظيف الصور المحلية التي تم حذفها من السيرفر
+                for root, dirs, files in os.walk(assets_dir):
+                    for file in files:
+                        if file.endswith('.png'):
+                            local_path = os.path.join(root, file)
+                            rel_path = os.path.relpath(local_path, assets_dir).replace(os.sep, '/')
+                            if rel_path not in remote_hashes:
+                                try: os.remove(local_path)
+                                except: pass
+
         except Exception as e:
             print("Sync images error:", e)
 
