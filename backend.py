@@ -939,14 +939,16 @@ def sync_images_background():
                                 f.write(img_r.content)
                                 
                 # تنظيف الصور المحلية التي تم حذفها من السيرفر
-                for root, dirs, files in os.walk(assets_dir):
-                    for file in files:
-                        if file.endswith('.png'):
-                            local_path = os.path.join(root, file)
-                            rel_path = os.path.relpath(local_path, assets_dir).replace(os.sep, '/')
-                            if rel_path not in remote_hashes:
-                                try: os.remove(local_path)
-                                except: pass
+                subjects_dir = os.path.join(assets_dir, "subjects")
+                if os.path.exists(subjects_dir):
+                    for root, dirs, files in os.walk(subjects_dir):
+                        for file in files:
+                            if file.endswith('.png'):
+                                local_path = os.path.join(root, file)
+                                rel_path = os.path.relpath(local_path, assets_dir).replace(os.sep, '/')
+                                if rel_path not in remote_hashes:
+                                    try: os.remove(local_path)
+                                    except: pass
 
         except Exception as e:
             print("Sync images error:", e)
