@@ -15,7 +15,7 @@ import eel
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-APP_VERSION = "8.6"
+APP_VERSION = "8.8"
 APP_NAME = "Tabaay_Student"
 BASE_URL_FILES = "http://pdd.xdt.mybluehost.me/update"
 HEADERS = {
@@ -942,6 +942,10 @@ def sync_images_background():
                             with open(local_file, "wb") as f:
                                 f.write(img_r.content)
                                 
+                if len(remote_hashes) == 0:
+                    print("No remote hashes, skipping cleanup")
+                    return
+
                 # تنظيف الصور المحلية التي تم حذفها من السيرفر
                 subjects_dir = os.path.join(assets_dir, "subjects")
                 if os.path.exists(subjects_dir):
