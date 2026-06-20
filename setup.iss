@@ -1,6 +1,6 @@
 [Setup]
 AppName=تحديث القلم الذكي
-AppVersion=8.8
+AppVersion=8.9
 DefaultDirName={autopf}\AlTabaayStudent
 DefaultGroupName=Al-Tabaay
 OutputDir=Output
@@ -18,6 +18,7 @@ Type: filesandordirs; Name: "{app}\*"
 [Files]
 Source: "dist\Tabaay_Student\Tabaay_Student.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\Tabaay_Student\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "web\*"; DestDir: "{app}\web"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Dirs]
 Name: "{app}\web\assets"; Permissions: users-modify

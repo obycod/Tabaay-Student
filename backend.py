@@ -15,7 +15,7 @@ import eel
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-APP_VERSION = "8.8"
+APP_VERSION = "8.9"
 APP_NAME = "Tabaay_Student"
 BASE_URL_FILES = "http://pdd.xdt.mybluehost.me/update"
 HEADERS = {
@@ -917,10 +917,7 @@ def sync_images_background():
                 
                 assets_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web", "assets")
                 if getattr(sys, 'frozen', False):
-                    if hasattr(sys, '_MEIPASS'):
-                        assets_dir = os.path.join(sys._MEIPASS, "web", "assets")
-                    else:
-                        assets_dir = os.path.join(os.path.dirname(sys.executable), "web", "assets")
+                    assets_dir = os.path.join(os.path.dirname(sys.executable), "web", "assets")
 
                 for relative_path, remote_hash in remote_hashes.items():
                     local_file = os.path.join(assets_dir, relative_path.replace('/', os.sep))
@@ -966,7 +963,11 @@ def sync_images_background():
 
 if __name__ == '__main__':
     chrome_profile = os.path.join(os.getenv('APPDATA', ''), 'TabaayStudentChromeProfile')
-    eel.init('web')
+    if getattr(sys, 'frozen', False):
+        web_dir = os.path.join(os.path.dirname(sys.executable), "web")
+    else:
+        web_dir = "web"
+    eel.init(web_dir)
     
     flags = [
         '--kiosk', 
