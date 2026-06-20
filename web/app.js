@@ -561,8 +561,8 @@ function sync_batch_complete() {
 
     // إخفاء القائمة داخلياً ولكن لا نغلق القائمة المنسدلة إلا بعد ضغط "موافق"
     setTimeout(() => {
-        // لا تمسح القائمة إذا كانت هناك فشل في التنزيلات، لكي يتمكن المستخدم من استئنافها
-        if (!result.hadFailure) {
+        // لا تمسح القائمة إذا كانت هناك فشل أو ملفات متوقفة في التنزيلات
+        if (!result.hadFailure && !result.hasPaused) {
             let dlList = document.getElementById('downloads-list');
             if (dlList) dlList.innerHTML = '';
 
@@ -587,6 +587,7 @@ function resetDownloadButton() {
     // إصلاح: يجب حفظ هذه القيم لأننا نقوم بتصفيرها قبل استخدامها بالأسفل
     let hadSuccess = window.hasSuccessfulDownloads;
     let hadFailure = window.hasFailedDownloads;
+    let hasPaused = document.querySelectorAll('.dl-pause.paused').length > 0;
 
     // إعادة أيقونة التحميل
     try {
@@ -609,7 +610,7 @@ function resetDownloadButton() {
             syncBtn.style.pointerEvents = "auto";
             syncBtn.style.opacity = "1";
 
-            if (hadFailure) {
+            if (hadFailure || hasPaused) {
                 syncBtn.innerHTML = "استئناف التحديث";
                 syncBtn.style.backgroundColor = "#FF9500";
             } else {
@@ -623,7 +624,7 @@ function resetDownloadButton() {
                 syncBtn.style.animation = "none";
                 syncBtn.style.pointerEvents = "auto";
                 syncBtn.style.opacity = "1";
-                if (hadFailure) {
+                if (hadFailure || hasPaused) {
                     syncBtn.innerHTML = "استئناف التحديث";
                     syncBtn.style.backgroundColor = "#FF9500";
                 } else {
@@ -661,31 +662,32 @@ function resetDownloadButton() {
                 try { openStage(currentStage); } catch(e) {}
             }
         } else {
-            // فشل كلي أو إلغاء - لا نمسح التحديد حتى يتمكن من المحاولة مجدداً
+            // فشل كلي أو إلغاء أو توقف - لا نمسح التحديد حتى يتمكن من المحاولة مجدداً
         }
     }
 
     try { toggleDashboard(false); } catch(e) {}
     try { eel.set_syncing_false()(); } catch(e) {}
 
-    return { hadSuccess, hadFailure };
+    return { hadSuccess, hadFailure, hasPaused };
 }
 
 function toggleDashboard(isSyncingNow) {
     let dlView = document.getElementById('global-dl-view');
-    let dlList = document.getElementById('downloads-list');
-    let hasIncomplete = false;
+    let hasActive = false;
     
+    let dlList = document.getElementById('downloads-list');
     if (dlList) {
         let items = dlList.querySelectorAll('.dl-item');
         items.forEach(item => {
-            if (!item.innerText.includes('اكتمل') && !item.innerText.includes('فشل')) {
-                hasIncomplete = true;
+            // It is active if it does NOT have completed, failed, AND NOT paused
+            if (!item.innerText.includes('اكتمل') && !item.innerText.includes('فشل') && !item.innerText.includes('مؤقتاً') && !item.innerText.includes('موقوف')) {
+                hasActive = true;
             }
         });
     }
 
-    if (isSyncingNow || hasIncomplete) {
+    if (isSyncingNow || hasActive) {
         if(dlView) {
             dlView.style.opacity = '1';
             dlView.style.pointerEvents = 'auto';
@@ -1042,6 +1044,14 @@ function openStage(stageName) {
     stageDetailsTitle.innerText = `${stageName}`;
     switchTab('stage-details');
 
+    isAllSelected = false;
+    let selectBtn = document.querySelector('.select-all-btn');
+    if(selectBtn) {
+        selectBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 6px;"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg> <span style="font-weight: 700; font-size: 14px;">تحديد الكل</span>';
+        selectBtn.style.color = "var(--text-subdued)";
+        selectBtn.style.borderColor = "var(--text-subdued)";
+    }
+
     let subjects = globalStagesData[stageName];
     subjectsGrid.innerHTML = '';
 
@@ -1187,13 +1197,13 @@ function toggleSelectAll() {
     });
 
     if(isAllSelected) {
-        selectBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> إلغاء التحديد';
+        selectBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 6px;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> <span style="font-weight: 700; font-size: 14px;">إلغاء التحديد</span>';
         selectBtn.style.color = "var(--text-base)";
         selectBtn.style.borderColor = "var(--text-base)";
     } else {
-        selectBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg> تحديد الكل';
+        selectBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 6px;"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg> <span style="font-weight: 700; font-size: 14px;">تحديد الكل</span>';
         selectBtn.style.color = "var(--text-subdued)";
-        selectBtn.style.borderColor = "var(--text-subdued)";
+        selectBtn.style.borderColor = "rgba(255, 255, 255, 0.1)";
     }
 }
 
