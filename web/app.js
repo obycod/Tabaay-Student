@@ -45,6 +45,10 @@ function switchTab(tabId) {
 // ===== Downloads Dropdown =====
 function toggleDownloadsDropdown() {
     let dd = document.getElementById('downloads-dropdown');
+    
+    // Close other dropdowns
+    closeSupportDropdown();
+    
     dd.classList.toggle('show');
 }
 
@@ -52,6 +56,36 @@ function closeDownloadsDropdown() {
     let dd = document.getElementById('downloads-dropdown');
     if(dd) dd.classList.remove('show');
 }
+
+// ===== Support Dropdown =====
+function toggleSupportDropdown() {
+    let dd = document.getElementById('support-dropdown');
+    
+    // Close other dropdowns
+    closeDownloadsDropdown();
+    
+    dd.classList.toggle('show');
+}
+
+function closeSupportDropdown() {
+    let dd = document.getElementById('support-dropdown');
+    if(dd) dd.classList.remove('show');
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(event) {
+    let dlBtn = document.getElementById('tab-downloads');
+    let dlDropdown = document.getElementById('downloads-dropdown');
+    if (dlBtn && dlDropdown && !dlBtn.contains(event.target) && !dlDropdown.contains(event.target)) {
+        closeDownloadsDropdown();
+    }
+    
+    let supBtn = document.getElementById('tab-support');
+    let supDropdown = document.getElementById('support-dropdown');
+    if (supBtn && supDropdown && !supBtn.contains(event.target) && !supDropdown.contains(event.target)) {
+        closeSupportDropdown();
+    }
+});
 
 // ===== Search =====
 function normalizeArabic(text) {
