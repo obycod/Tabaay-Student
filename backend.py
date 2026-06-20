@@ -13,15 +13,26 @@ import requests
 import urllib3
 import eel
 
+import base64
+
+def _d(s):
+    k = "TAB3Y"
+    try:
+        decoded = base64.b64decode(s).decode('utf-8')
+        return "".join(chr(ord(c) ^ ord(k[i % len(k)])) for i, c in enumerate(decoded))
+    except:
+        return ""
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 APP_VERSION = "9.0"
 APP_NAME = "Tabaay_Student"
-BASE_URL_FILES = "http://pdd.xdt.mybluehost.me/update"
+BASE_URL_FILES = _d("PDU2Qypubm1DPTBvOlcteiw7UTUhJCpcKiBvL1Z2ITEmUi0x")
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-    "Connection": "keep-alive"
+    "Connection": "keep-alive",
+    "X-Tabaay-Auth": "TABAAY_SECURE_77x9"
 }
 
 # مجلد مؤقت محلي على جهاز الكمبيوتر لتسريع التحميل
