@@ -1,6 +1,6 @@
 [Setup]
 AppName=تحديث القلم الذكي
-AppVersion=11.1
+AppVersion=11.2
 DefaultDirName={autopf}\AlTabaayStudent
 DefaultGroupName=Al-Tabaay
 OutputDir=Output
@@ -58,6 +58,7 @@ end;
 function InitializeSetup(): Boolean;
 var
   sUnInstallString: String;
+  AppDir: String;
   iResultCode: Integer;
 begin
   Result := True;
@@ -65,7 +66,8 @@ begin
   if sUnInstallString <> '' then 
   begin
     sUnInstallString := RemoveQuotes(sUnInstallString);
-    // إضافة /_?= تمنع برنامج الحذف من الانفصال والعمل في الخلفية، مما يحل مشكلة مسح المجلد بالكامل
-    Exec(sUnInstallString, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /_?=' + ExpandConstant('{app}'), '', SW_HIDE, ewWaitUntilTerminated, iResultCode);
+    AppDir := ExtractFileDir(sUnInstallString);
+    // إضافة /_?= مع مسار البرنامج تمنع برنامج الحذف من الانفصال والعمل في الخلفية، مما يحل مشكلة مسح المجلد بالكامل
+    Exec(sUnInstallString, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /_?="' + AppDir + '"', '', SW_HIDE, ewWaitUntilTerminated, iResultCode);
   end;
 end;
