@@ -25,7 +25,7 @@ def _d(s):
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-APP_VERSION = "10.1"
+APP_VERSION = "11.0"
 APP_NAME = "Tabaay_Student"
 BASE_URL_FILES = _d("PDU2Qypubm1DPTBvOlcteiw7UTUhJCpcKiBvL1Z2ITEmUi0x")
 HEADERS = {
