@@ -1,6 +1,6 @@
 [Setup]
 AppName=تحديث القلم الذكي
-AppVersion=11.0
+AppVersion=11.1
 DefaultDirName={autopf}\AlTabaayStudent
 DefaultGroupName=Al-Tabaay
 OutputDir=Output
@@ -32,6 +32,8 @@ Name: "desktopicon"; Description: "إنشاء اختصار على سطح الم�
 
 [Run]
 Filename: "{app}\Tabaay_Student.exe"; Description: "تشغيل البرنامج الآن"; Flags: nowait postinstall
+; أمر لفتح البرنامج تلقائياً إذا كان التثبيت يعمل بصمت في الخلفية
+Filename: "{app}\Tabaay_Student.exe"; Flags: nowait; Check: WizardSilent
 
 [Code]
 // هذه الدالة تبحث عن النسخة القديمة في الريجستري وتجلب مسار ملف الحذف
@@ -63,7 +65,7 @@ begin
   if sUnInstallString <> '' then 
   begin
     sUnInstallString := RemoveQuotes(sUnInstallString);
-    // تشغيل ملف الحذف بصمت تام (بدون نوافذ) قبل البدء بالتثبيت الجديد
-    Exec(sUnInstallString, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '', SW_HIDE, ewWaitUntilTerminated, iResultCode);
+    // إضافة /_?= تمنع برنامج الحذف من الانفصال والعمل في الخلفية، مما يحل مشكلة مسح المجلد بالكامل
+    Exec(sUnInstallString, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /_?=' + ExpandConstant('{app}'), '', SW_HIDE, ewWaitUntilTerminated, iResultCode);
   end;
 end;
