@@ -31,9 +31,9 @@ Name: "{autodesktop}\تحديث القلم الذكي"; Filename: "{app}\Tabaay_
 Name: "desktopicon"; Description: "إنشاء اختصار على سطح المكتب"; GroupDescription: "اختصارات إضافية:"
 
 [Run]
-Filename: "{app}\Tabaay_Student.exe"; Description: "تشغيل البرنامج الآن"; Flags: nowait postinstall
+Filename: "{app}\Tabaay_Student.exe"; Description: "تشغيل البرنامج الآن"; Flags: nowait postinstall runasoriginaluser
 ; أمر لفتح البرنامج تلقائياً إذا كان التثبيت يعمل بصمت في الخلفية
-Filename: "{app}\Tabaay_Student.exe"; Flags: nowait; Check: WizardSilent
+Filename: "{app}\Tabaay_Student.exe"; Flags: nowait runasoriginaluser; Check: WizardSilent
 
 [Code]
 // هذه الدالة تبحث عن النسخة القديمة في الريجستري وتجلب مسار ملف الحذف

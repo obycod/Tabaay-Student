@@ -74,16 +74,24 @@ function closeSupportDropdown() {
 
 // Close dropdowns when clicking outside
 document.addEventListener('click', function(event) {
+    if (!document.body.contains(event.target)) return;
+
     let dlBtn = document.getElementById('tab-downloads');
     let dlDropdown = document.getElementById('downloads-dropdown');
-    if (dlBtn && dlDropdown && !dlBtn.contains(event.target) && !dlDropdown.contains(event.target)) {
-        closeDownloadsDropdown();
+    let globalDlView = document.getElementById('global-dl-view');
+    
+    let clickedDlBtn = dlBtn && dlBtn.contains(event.target);
+    let clickedDropdown = dlDropdown && dlDropdown.contains(event.target);
+    let clickedGlobal = globalDlView && globalDlView.contains(event.target);
+
+    if (!clickedDlBtn && !clickedDropdown && !clickedGlobal) {
+        if(dlDropdown) dlDropdown.classList.remove('show');
     }
     
     let supBtn = document.getElementById('tab-support');
     let supDropdown = document.getElementById('support-dropdown');
     if (supBtn && supDropdown && !supBtn.contains(event.target) && !supDropdown.contains(event.target)) {
-        closeSupportDropdown();
+        if(supDropdown) supDropdown.classList.remove('show');
     }
 });
 
@@ -665,8 +673,19 @@ function resetDownloadButton() {
 
 function toggleDashboard(isSyncingNow) {
     let dlView = document.getElementById('global-dl-view');
+    let dlList = document.getElementById('downloads-list');
+    let hasIncomplete = false;
+    
+    if (dlList) {
+        let items = dlList.querySelectorAll('.dl-item');
+        items.forEach(item => {
+            if (!item.innerText.includes('اكتمل') && !item.innerText.includes('فشل')) {
+                hasIncomplete = true;
+            }
+        });
+    }
 
-    if (isSyncingNow) {
+    if (isSyncingNow || hasIncomplete) {
         if(dlView) {
             dlView.style.opacity = '1';
             dlView.style.pointerEvents = 'auto';
