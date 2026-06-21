@@ -25,7 +25,7 @@ def _d(s):
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-APP_VERSION = "11.6"
+APP_VERSION = "11.7"
 APP_NAME = "Tabaay_Student"
 BASE_URL_FILES = _d("PDU2Qypubm1DPTBvOlcteiw7UTUhJCpcKiBvL1Z2ITEmUi0x")
 HEADERS = {
@@ -442,6 +442,24 @@ def get_downloaded_acts(pen_drive):
 
 monitor_thread_instance = None
 
+active_downloads_count = 0
+_active_downloads_lock = threading.Lock()
+
+def increment_active_download():
+    global active_downloads_count
+    with _active_downloads_lock:
+        active_downloads_count += 1
+
+def decrement_active_download():
+    global active_downloads_count
+    with _active_downloads_lock:
+        active_downloads_count -= 1
+        if active_downloads_count <= 0:
+            active_downloads_count = 0
+            try:
+                eel.sync_batch_complete()()
+            except: pass
+
 @eel.expose
 def monitor_sync():
     global is_syncing, global_dl_state, global_speed_history, pause_flags, cancel_flags
@@ -529,6 +547,7 @@ def start_sync(files, pen_drive):
     
     # تشغيل كل ملف في خيط منفصل مع تمرير العداد المشترك لتبدأ جميع التنزيلات في نفس الوقت
     for f in files:
+        increment_active_download()
         threading.Thread(
             target=sync_worker,
             args=([f], pen_drive, finished_counter, total_files),
@@ -756,17 +775,8 @@ def sync_worker(files_subset, pen_drive, finished_counter=None, total_files=1):
 def _notify_finished(finished_counter=None, total_files=1):
     """
     إشعار داخلي: يُحصي عدد الملفات المنتهية
-    عندما تنتهي جميع الملفات، يستدعي sync_batch_complete مرة واحدة فقط
     """
-    if finished_counter is None:
-        return
-    with finished_counter["lock"]:
-        finished_counter["count"] += 1
-        if finished_counter["count"] >= total_files:
-            # استدعاء sync_batch_complete مرة واحدة بعد انتهاء جميع الملفات
-            try:
-                eel.sync_batch_complete()()
-            except: pass
+    decrement_active_download()
 
 
 @eel.expose
@@ -808,7 +818,8 @@ def resume_download(item, pen_drive):
         usb_thread_running = True
         threading.Thread(target=usb_copier_worker, daemon=True).start()
         
-    # عند الاستئناف، نمرر counter=None لأننا لا نريد sync_batch_complete عند استئناف ملف واحد
+    # عند الاستئناف، نمرر counter=None لأننا لا نريد sync_batch_complete القديم
+    increment_active_download()
     threading.Thread(target=sync_worker, args=([item], pen_drive, None, 1), daemon=True).start()
 
 
@@ -907,12 +918,18 @@ def apply_app_update(download_link):
             updater_vbs = os.path.join(temp_dir, "updater.vbs")
             my_pid = os.getpid()
             
+            app_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
+            exe_name = os.path.basename(sys.executable) if getattr(sys, 'frozen', False) else "Tabaay_Student.exe"
+            
             with open(updater_bat, "w", encoding="utf-8") as f:
                 f.write("@echo off\n")
                 f.write("timeout /t 2 /nobreak > NUL\n")
                 f.write(f"taskkill /F /T /PID {my_pid} > NUL 2>&1\n")
                 f.write("taskkill /F /IM Tabaay_Student.exe > NUL 2>&1\n")
-                f.write(f'"{installer_path}" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART\n')
+                f.write(f'start /WAIT "" "{installer_path}" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART\n')
+                f.write("timeout /t 1 /nobreak > NUL\n")
+                f.write(f'cd /d "{app_dir}"\n')
+                f.write(f'start "" "{exe_name}"\n')
 
             with open(updater_vbs, "w", encoding="utf-8") as f:
                 f.write(f'CreateObject("WScript.Shell").Run """{updater_bat}""", 0, False\n')

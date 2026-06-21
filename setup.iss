@@ -1,6 +1,6 @@
 [Setup]
 AppName=تحديث القلم الذكي
-AppVersion=11.6
+AppVersion=11.7
 DefaultDirName={autopf}\AlTabaayStudent
 DefaultGroupName=Al-Tabaay
 OutputDir=Output
@@ -33,8 +33,6 @@ Name: "desktopicon"; Description: "إنشاء اختصار على سطح الم�
 
 [Run]
 Filename: "{app}\Tabaay_Student.exe"; Description: "تشغيل البرنامج الآن"; Flags: nowait postinstall runasoriginaluser
-; أمر لفتح البرنامج تلقائياً إذا كان التثبيت يعمل بصمت في الخلفية
-Filename: "{win}\explorer.exe"; Parameters: """{app}\Tabaay_Student.exe"""; Flags: nowait; Check: WizardSilent
 
 [Code]
 // هذه الدالة تبحث عن النسخة القديمة في الريجستري وتجلب مسار ملف الحذف

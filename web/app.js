@@ -1068,7 +1068,8 @@ function openStage(stageName) {
 
         let isSelected = globalSelectedSubjects.has(subj.act);
         let checkedAttr = isSelected ? 'checked' : '';
-        let cursorStyle = 'cursor:pointer;';
+        let disabledAttr = isLocked ? 'disabled' : '';
+        let cursorStyle = isLocked ? 'cursor:default; opacity: 0.8;' : 'cursor:pointer;';
         let itemClass = isSelected ? 'subject-item checked' : 'subject-item';
 
         let corruptedBadge = isCorrupted
@@ -1091,7 +1092,7 @@ function openStage(stageName) {
                     </div>
                 </div>
                 <div style="margin-left: 16px;">
-                    <input type="checkbox" class="checkbox-custom" id="cb-${index}" ${checkedAttr} data-act="${subj.act}" data-subject="${subj.subject.replace(/'/g, "\\'")}" data-size="${subj.size_bytes || 0}" onclick="event.stopPropagation();" onchange="onSubjectCheckboxChange(this);">
+                    <input type="checkbox" class="checkbox-custom" id="cb-${index}" ${checkedAttr} ${disabledAttr} data-act="${subj.act}" data-subject="${subj.subject.replace(/'/g, "\\'")}" data-size="${subj.size_bytes || 0}" onclick="event.stopPropagation();" onchange="onSubjectCheckboxChange(this);">
                 </div>
             </div>
         `;
@@ -1102,9 +1103,19 @@ function openStage(stageName) {
 }
 
 function toggleSubject(act, cbId, subjName, sizeB = 0) {
+    if (isSyncing) {
+        showToast("يرجى الانتظار حتى يكتمل التحديث ⏳", "error");
+        return;
+    }
+
     let cb = document.getElementById(cbId);
     if (!cb) return;
     
+    if (cb.disabled) {
+        showToast("هذه المادة متوفرة مسبقاً ومكتملة في القلم ✔", "info");
+        return;
+    }
+
     let itemDiv = document.getElementById(cbId.replace('cb-', 'subj-'));
     
     // Toggle the checkbox visually
@@ -1120,6 +1131,18 @@ function toggleSubject(act, cbId, subjName, sizeB = 0) {
 }
 
 function onSubjectCheckboxChange(cb) {
+    if (cb.disabled) {
+        cb.checked = true; // Force it to remain checked
+        showToast("هذه المادة متوفرة مسبقاً ومكتملة في القلم ✔", "info");
+        return;
+    }
+    
+    if (isSyncing) {
+        cb.checked = !cb.checked;
+        showToast("يرجى الانتظار حتى يكتمل التحديث ⏳", "error");
+        return;
+    }
+
     let act = cb.getAttribute('data-act');
     let subjName = cb.getAttribute('data-subject');
     let sizeB = parseInt(cb.getAttribute('data-size') || "0");
@@ -1136,11 +1159,17 @@ function onSubjectCheckboxChange(cb) {
 
 let isAllSelected = false;
 function toggleSelectAll() {
+    if (isSyncing) {
+        showToast("يرجى الانتظار حتى يكتمل التحديث ⏳", "error");
+        return;
+    }
+
     isAllSelected = !isAllSelected;
     let checkboxes = document.querySelectorAll('#subjects-grid .checkbox-custom');
     let selectBtn = document.querySelector('.select-all-btn');
 
     checkboxes.forEach(cb => {
+        if (cb.disabled) return; // لا نلغي تحديد المواد المقفلة المكتملة
         
         cb.checked = isAllSelected;
         let item = cb.closest('.subject-item');
