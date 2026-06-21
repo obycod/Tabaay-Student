@@ -1,6 +1,6 @@
 [Setup]
 AppName=تحديث القلم الذكي
-AppVersion=11.5
+AppVersion=11.6
 DefaultDirName={autopf}\AlTabaayStudent
 DefaultGroupName=Al-Tabaay
 OutputDir=Output
@@ -24,8 +24,9 @@ Source: "web\*"; DestDir: "{app}\web"; Flags: ignoreversion recursesubdirs creat
 Name: "{app}\web\assets"; Permissions: users-modify
 
 [Icons]
-Name: "{group}\تحديث القلم الذكي"; Filename: "{app}\Tabaay_Student.exe"
-Name: "{autodesktop}\تحديث القلم الذكي"; Filename: "{app}\Tabaay_Student.exe"; Tasks: desktopicon
+Name: "{group}\تحديث القلم الذكي"; Filename: "{app}\Tabaay_Student.exe"; IconFilename: "{app}\web\icon.ico"
+Name: "{group}\{cm:UninstallProgram,تحديث القلم الذكي}"; Filename: "{uninstallexe}"
+Name: "{autodesktop}\تحديث القلم الذكي"; Filename: "{app}\Tabaay_Student.exe"; Tasks: desktopicon; IconFilename: "{app}\web\icon.ico"
 
 [Tasks]
 Name: "desktopicon"; Description: "إنشاء اختصار على سطح المكتب"; GroupDescription: "اختصارات إضافية:"
@@ -33,7 +34,7 @@ Name: "desktopicon"; Description: "إنشاء اختصار على سطح الم�
 [Run]
 Filename: "{app}\Tabaay_Student.exe"; Description: "تشغيل البرنامج الآن"; Flags: nowait postinstall runasoriginaluser
 ; أمر لفتح البرنامج تلقائياً إذا كان التثبيت يعمل بصمت في الخلفية
-Filename: "{app}\Tabaay_Student.exe"; Flags: nowait runasoriginaluser; Check: WizardSilent
+Filename: "{win}\explorer.exe"; Parameters: """{app}\Tabaay_Student.exe"""; Flags: nowait; Check: WizardSilent
 
 [Code]
 // هذه الدالة تبحث عن النسخة القديمة في الريجستري وتجلب مسار ملف الحذف

@@ -559,17 +559,7 @@ function sync_batch_complete() {
     // يُستدعى مرة واحدة فقط من Python بعد انتهاء جميع الملفات
     let result = resetDownloadButton();
 
-    // إخفاء القائمة داخلياً ولكن لا نغلق القائمة المنسدلة إلا بعد ضغط "موافق"
-    setTimeout(() => {
-        // لا تمسح القائمة إذا كانت هناك فشل أو ملفات متوقفة في التنزيلات
-        if (!result.hadFailure && !result.hasPaused) {
-            let dlList = document.getElementById('downloads-list');
-            if (dlList) dlList.innerHTML = '';
-
-            let emptyEl = document.getElementById('empty-downloads');
-            if (emptyEl) emptyEl.style.display = 'block';
-        }
-    }, 2500);
+    // نكتفي بإعادة ضبط الزر وحالة التحميل، بدون مسح القائمة نهائياً
 }
 
 function checkAllDownloadsFinished() {
@@ -1078,8 +1068,7 @@ function openStage(stageName) {
 
         let isSelected = globalSelectedSubjects.has(subj.act);
         let checkedAttr = isSelected ? 'checked' : '';
-        let disabledAttr = isLocked ? 'disabled' : '';
-        let cursorStyle = isLocked ? 'cursor:default; opacity: 0.8;' : 'cursor:pointer;';
+        let cursorStyle = 'cursor:pointer;';
         let itemClass = isSelected ? 'subject-item checked' : 'subject-item';
 
         let corruptedBadge = isCorrupted
@@ -1102,7 +1091,7 @@ function openStage(stageName) {
                     </div>
                 </div>
                 <div style="margin-left: 16px;">
-                    <input type="checkbox" class="checkbox-custom" id="cb-${index}" ${checkedAttr} ${disabledAttr} data-act="${subj.act}" data-subject="${subj.subject.replace(/'/g, "\\'")}" data-size="${subj.size_bytes || 0}" onclick="event.stopPropagation();" onchange="onSubjectCheckboxChange(this);">
+                    <input type="checkbox" class="checkbox-custom" id="cb-${index}" ${checkedAttr} data-act="${subj.act}" data-subject="${subj.subject.replace(/'/g, "\\'")}" data-size="${subj.size_bytes || 0}" onclick="event.stopPropagation();" onchange="onSubjectCheckboxChange(this);">
                 </div>
             </div>
         `;
@@ -1113,19 +1102,9 @@ function openStage(stageName) {
 }
 
 function toggleSubject(act, cbId, subjName, sizeB = 0) {
-    if (isSyncing) {
-        showToast("يرجى الانتظار حتى يكتمل التحديث ⏳", "error");
-        return;
-    }
-
     let cb = document.getElementById(cbId);
     if (!cb) return;
     
-    if (cb.disabled) {
-        showToast("هذه المادة متوفرة مسبقاً ومكتملة في القلم ✔", "info");
-        return;
-    }
-
     let itemDiv = document.getElementById(cbId.replace('cb-', 'subj-'));
     
     // Toggle the checkbox visually
@@ -1141,18 +1120,6 @@ function toggleSubject(act, cbId, subjName, sizeB = 0) {
 }
 
 function onSubjectCheckboxChange(cb) {
-    if (cb.disabled) {
-        cb.checked = true; // Force it to remain checked
-        showToast("هذه المادة متوفرة مسبقاً ومكتملة في القلم ✔", "info");
-        return;
-    }
-    
-    if (isSyncing) {
-        cb.checked = !cb.checked;
-        showToast("يرجى الانتظار حتى يكتمل التحديث ⏳", "error");
-        return;
-    }
-
     let act = cb.getAttribute('data-act');
     let subjName = cb.getAttribute('data-subject');
     let sizeB = parseInt(cb.getAttribute('data-size') || "0");
@@ -1169,17 +1136,11 @@ function onSubjectCheckboxChange(cb) {
 
 let isAllSelected = false;
 function toggleSelectAll() {
-    if (isSyncing) {
-        showToast("يرجى الانتظار حتى يكتمل التحديث ⏳", "error");
-        return;
-    }
-
     isAllSelected = !isAllSelected;
     let checkboxes = document.querySelectorAll('#subjects-grid .checkbox-custom');
     let selectBtn = document.querySelector('.select-all-btn');
 
     checkboxes.forEach(cb => {
-        if (cb.disabled) return; // لا نلغي تحديد المواد المقفلة المكتملة
         
         cb.checked = isAllSelected;
         let item = cb.closest('.subject-item');

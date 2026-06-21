@@ -25,7 +25,7 @@ def _d(s):
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-APP_VERSION = "11.5"
+APP_VERSION = "11.6"
 APP_NAME = "Tabaay_Student"
 BASE_URL_FILES = _d("PDU2Qypubm1DPTBvOlcteiw7UTUhJCpcKiBvL1Z2ITEmUi0x")
 HEADERS = {
@@ -442,8 +442,9 @@ def get_downloaded_acts(pen_drive):
 
 monitor_thread_instance = None
 
+@eel.expose
 def monitor_sync():
-    global is_syncing, global_dl_state, global_speed_history
+    global is_syncing, global_dl_state, global_speed_history, pause_flags, cancel_flags
     while is_syncing:
         time.sleep(1)
         total_loc = 0
@@ -454,11 +455,24 @@ def monitor_sync():
             state_copy = dict(global_dl_state)
         
         for act, data in state_copy.items():
+            # تجاهل الملفات الموقوفة أو الملغاة من حساب الوقت والسرعة الإجمالية
+            with _pause_lock:
+                if pause_flags.get(act, False): continue
+            with _cancel_lock:
+                if cancel_flags.get(act, False) or cancel_flags.get('ALL', False): continue
+                
             n_loc = data.get("net_loc", 0)
             p_loc = data.get("pen_loc", 0)
             total_loc += (n_loc + p_loc) / 2
             total_size += data.get("size", 0)
-            total_speed += data.get("net_speed", 0) + data.get("pen_speed", 0)
+            # بما أن النقل والتحميل يتمان بشكل متزامن، سرعة العملية الإجمالية هي متوسطهما
+            # إذا كان أحدهما لا يعمل، نعتمد على الآخر
+            net_s = data.get("net_speed", 0)
+            pen_s = data.get("pen_speed", 0)
+            if net_s > 0 and pen_s > 0:
+                total_speed += (net_s + pen_s) / 2
+            else:
+                total_speed += (net_s + pen_s)
             
         if total_size > 0:
             pct = int((total_loc / total_size) * 100)
