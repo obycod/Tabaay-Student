@@ -96,6 +96,14 @@ document.addEventListener('click', function(event) {
 });
 
 // ===== Search =====
+function clearSearch() {
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.value = '';
+        handleSearch();
+    }
+}
+
 function normalizeArabic(text) {
     if(!text) return "";
     return text.replace(/[أإآا]/g, 'ا')
@@ -106,8 +114,14 @@ function normalizeArabic(text) {
 }
 
 function handleSearch() {
-    const rawQuery = document.getElementById('search-input').value.toLowerCase();
+    const searchInput = document.getElementById('search-input');
+    const clearBtn = document.getElementById('clear-search-btn');
+    const rawQuery = searchInput.value.toLowerCase();
     const query = normalizeArabic(rawQuery);
+
+    if (clearBtn) {
+        clearBtn.style.display = rawQuery ? 'block' : 'none';
+    }
 
     // إصلاح: إذا كان البحث فارغاً، عُد للعرض السابق بدلاً من شاشة فارغة
     if (query === '') {
