@@ -354,7 +354,8 @@ function proceedWithSync(selectedFiles) {
     dlList.innerHTML = dlHtml;
 
     // أيقونة الدوران
-    document.getElementById('tab-downloads').innerHTML = '<svg class="spinner" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1DB954" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>';
+    document.getElementById('tab-downloads').innerHTML = '<svg class="spinner" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1DB954" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg><div id="dl-active-indicator" class="download-active-indicator" style="display: none;"></div>';
+    try { updateActiveIndicator(); } catch(e) {}
 
     let syncBtn = document.getElementById('sync-btn');
     if(syncBtn) {
@@ -406,6 +407,13 @@ function pauseSyncItem(act) {
 
         if (itemToResume) {
             eel.resume_download(itemToResume, currentPenDrive)();
+        }
+
+        // إظهار أيقونة الدوران لأننا استأنفنا
+        let tabDl = document.getElementById('tab-downloads');
+        if (tabDl) {
+            tabDl.innerHTML = '<svg class="spinner" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1DB954" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg><div id="dl-active-indicator" class="download-active-indicator" style="display: none;"></div>';
+            try { updateActiveIndicator(); } catch(e) {}
         }
 
         // التحقق مما إذا تم استئناف جميع الملفات لتحديث الزر الرئيسي
@@ -612,7 +620,10 @@ function resetDownloadButton() {
     // إعادة أيقونة التحميل
     try {
         let tabDl = document.getElementById('tab-downloads');
-        if (tabDl) tabDl.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg><div id="dl-active-indicator" class="download-active-indicator" style="display: none;"></div>';
+        if (tabDl) {
+            tabDl.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg><div id="dl-active-indicator" class="download-active-indicator" style="display: none;"></div>';
+            try { updateActiveIndicator(); } catch(e) {}
+        }
     } catch(e) {}
 
     // إعادة ضبط isSyncing فقط - لا نمسح globalSelectedSubjects هنا
