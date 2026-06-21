@@ -707,20 +707,33 @@ function resetDownloadButton() {
     return { hadSuccess, hadFailure, hasPaused };
 }
 
-function toggleDashboard(isSyncingNow) {
-    let dlView = document.getElementById('global-dl-view');
-    let hasActive = false;
-    
+function updateActiveIndicator() {
+    let activeCount = 0;
     let dlList = document.getElementById('downloads-list');
     if (dlList) {
         let items = dlList.querySelectorAll('.dl-item');
         items.forEach(item => {
-            // It is active if it does NOT have completed, failed, AND NOT paused
             if (!item.innerText.includes('اكتمل') && !item.innerText.includes('فشل') && !item.innerText.includes('مؤقتاً') && !item.innerText.includes('موقوف')) {
-                hasActive = true;
+                activeCount++;
             }
         });
     }
+
+    let indicator = document.getElementById('dl-active-indicator');
+    if (indicator) {
+        if (activeCount > 0) {
+            indicator.style.display = 'flex';
+            indicator.innerText = activeCount;
+        } else {
+            indicator.style.display = 'none';
+        }
+    }
+    return activeCount;
+}
+
+function toggleDashboard(isSyncingNow) {
+    let dlView = document.getElementById('global-dl-view');
+    let hasActive = (updateActiveIndicator() > 0);
 
     if (isSyncingNow || hasActive) {
         if(dlView) {
@@ -893,6 +906,7 @@ function update_global_progress(pct, sizes_str, speed_str, eta_str, history) {
     document.getElementById('g-dl-speed').innerText = speed_str;
     document.getElementById('g-dl-eta').innerText = eta_str;
     document.getElementById('g-dl-progress-fill').style.width = pct + '%';
+    try { updateActiveIndicator(); } catch(e) {}
 }
 
 // ===== Load Data =====

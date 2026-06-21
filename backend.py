@@ -25,7 +25,7 @@ def _d(s):
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-APP_VERSION = "12.1"
+APP_VERSION = "12.2"
 APP_NAME = "Tabaay_Student"
 BASE_URL_FILES = _d("PDU2Qypubm1DPTBvOlcteiw7UTUhJCpcKiBvL1Z2ITEmUi0x")
 HEADERS = {
@@ -1043,12 +1043,13 @@ if __name__ == '__main__':
         '--disable-sync'
     ]
     try:
-        eel.start('index.html?v=50', mode='chrome', cmdline_args=flags)
+        eel.start('index.html?v=50', mode='chrome', cmdline_args=flags, port=0)
     except EnvironmentError:
         try:
-            eel.start('index.html?v=50', mode='edge', cmdline_args=flags)
+            eel.start('index.html?v=50', mode='edge', cmdline_args=flags, port=0)
         except EnvironmentError:
             try:
-                eel.start('index.html?v=50', mode='default')
+                # If both fail, we still run the server but without opening a browser
+                eel.start('index.html?v=50', mode=None, port=0)
             except Exception as e:
                 print("Failed to start browser:", e)
