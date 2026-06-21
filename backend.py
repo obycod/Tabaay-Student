@@ -25,7 +25,7 @@ def _d(s):
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-APP_VERSION = "11.8"
+APP_VERSION = "12.0"
 APP_NAME = "Tabaay_Student"
 BASE_URL_FILES = _d("PDU2Qypubm1DPTBvOlcteiw7UTUhJCpcKiBvL1Z2ITEmUi0x")
 HEADERS = {
@@ -98,6 +98,7 @@ _pause_lock  = threading.Lock()
 cancel_flags = {}
 pause_flags = {}
 act_to_name = {}
+act_to_matid = {}
 global_dl_state = {}
 global_speed_history = []
 
@@ -232,9 +233,10 @@ def get_pen_contents(pen_drive):
             
             act_lower = f.lower()
             subject_name = act_to_name.get(act_lower, f.replace('.ALT', '').replace('.alt', '').replace('.ALI', '').replace('.ali', ''))
+            mat_id = act_to_matid.get(act_lower, "")
             size_bytes = os.path.getsize(os.path.join(ebook_dir, f))
             size_mb = size_bytes / (1024 * 1024)
-            files.append({"act": f, "subject": subject_name, "size_mb": size_mb})
+            files.append({"act": f, "subject": subject_name, "mat_id": mat_id, "size_mb": size_mb})
     except: pass
     return files
 
@@ -339,8 +341,8 @@ def fetch_stages_background():
         if acts_to_fetch:
             def fetch_size(act):
                 try:
-                    url = f"{BASE_URL_FILES}/{act}"
-                    with requests.get(url, headers=HEADERS, stream=True, timeout=(5, 15), verify=False) as r:
+                    url = f"{BASE_URL_FILES}/{act.replace(chr(92), '/')}"
+                    with requests.head(url, headers=HEADERS, timeout=(5, 15), verify=False) as r:
                         if r.status_code == 200:
                             return act, int(r.headers.get('content-length', 0))
                 except: pass
@@ -365,10 +367,13 @@ def fetch_stages_background():
 
 def fetch_stages_logic():
     """جلب قائمة الملفات من السيرفر وتجميعها حسب المراحل"""
-    global act_to_name
+    global act_to_name, act_to_matid
     act_to_name.clear()
+    act_to_matid.clear()
     
     url = f"{BASE_URL_FILES}/files.txt?v={time.time()}"
+    url_ids = f"{BASE_URL_FILES}/files_ids.txt?v={time.time()}"
+    
     try:
         resp = requests.get(url, headers=HEADERS, timeout=10, verify=False)
         if resp.status_code != 200:
@@ -377,6 +382,18 @@ def fetch_stages_logic():
         text = resp.text
     except Exception as e:
         return {"error": str(e)}
+        
+    try:
+        resp_ids = requests.get(url_ids, headers=HEADERS, timeout=5, verify=False)
+        if resp_ids.status_code == 200:
+            resp_ids.encoding = 'utf-8'
+            for line in resp_ids.text.splitlines():
+                if "|" in line:
+                    parts = [p.strip() for p in line.split("|")]
+                    if len(parts) >= 2:
+                        act_to_matid[parts[0].lower()] = parts[1]
+    except Exception as e:
+        pass # Ignore errors if file doesn't exist yet
 
     # تحميل كاش الأحجام
     import json
@@ -400,6 +417,7 @@ def fetch_stages_logic():
             if "(موقوف)" in disp: continue
             
             act_to_name[act.lower()] = disp
+            mat_id = act_to_matid.get(act.lower(), "")
             
             mapped = map_and_expand_stages(act, disp, raw_stage)
             for m in mapped:
@@ -420,6 +438,7 @@ def fetch_stages_logic():
                 stages_data[s_name].append({
                     "act": m['act'],
                     "subject": m['subject'],
+                    "mat_id": mat_id,
                     "size_mb": size_mb,
                     "size_bytes": size_bytes
                 })
@@ -581,7 +600,7 @@ def sync_worker(files_subset, pen_drive, finished_counter=None, total_files=1):
     for f in files_subset:
         act = f['act']
         try:
-            url = f"{BASE_URL_FILES}/{act}"
+            url = f"{BASE_URL_FILES}/{act.replace(chr(92), '/')}"
             with requests.head(url, headers=HEADERS, timeout=(5, 10), verify=False) as r:
                 if r.status_code == 200:
                     size = int(r.headers.get('content-length', 0))
@@ -604,7 +623,7 @@ def sync_worker(files_subset, pen_drive, finished_counter=None, total_files=1):
                 _notify_finished(finished_counter, total_files)
                 continue
             
-        url = f"{BASE_URL_FILES}/{act}"
+        url = f"{BASE_URL_FILES}/{act.replace(chr(92), '/')}"
         
         # مسارات الملفات: المؤقت المحلي (PC) والنهائي (القلم)
         tmp_local = os.path.join(TEMP_FOLDER, act + ".tmp")   # الملف المؤقت على الكمبيوتر

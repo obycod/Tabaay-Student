@@ -145,37 +145,50 @@ function handleSearch() {
         let queryWords = query.split(' ').filter(w => w.trim().length > 0);
         subjects.forEach((subj, index) => {
             let subjectLower = normalizeArabic(subj.subject.toLowerCase());
-            let match = queryWords.length === 0 || queryWords.every(word => subjectLower.includes(word));
+            let matIdLower = subj.mat_id ? subj.mat_id.toLowerCase() : "";
+            let match = queryWords.length === 0 || queryWords.every(word => subjectLower.includes(word) || matIdLower.includes(word));
             if(match) {
                 resultCount++;
                 let currentId = resultCount;
                 let safeName = subj.subject.split('\\').join('-').split('/').join('-').split(':').join('-').trim();
+                
+                let isDownloaded = subj.act && typeof downloadedFilesCache !== 'undefined' && downloadedFilesCache[subj.act.trim().toLowerCase()] !== undefined;
+                let badgeHtml = isDownloaded ? `<span style="background: rgba(29, 185, 84, 0.15); color: #1DB954; border: 1px solid rgba(29, 185, 84, 0.3); padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 800; margin-right: 8px;">متوفرة بالقلم ✔</span>` : '';
+                
+                let isLocked = isDownloaded && !subj.is_corrupted;
+                let disabledAttr = isLocked ? 'disabled' : '';
+                let cursorStyle = isLocked ? 'cursor:default; opacity: 0.8;' : 'cursor:pointer;';
+                
+                // Auto-select downloaded items if not selected
+                if (isDownloaded && !globalSelectedSubjects.has(subj.act)) {
+                    globalSelectedSubjects.set(subj.act, {act: subj.act, subject: subj.subject, size_bytes: subj.size_bytes || 0});
+                }
+
                 let isSelected = globalSelectedSubjects.has(subj.act);
                 let checkedAttr = isSelected ? 'checked' : '';
                 let itemClass = isSelected ? 'subject-item checked' : 'subject-item';
-
-                let isDownloaded = subj.act && typeof downloadedFilesCache !== 'undefined' && downloadedFilesCache[subj.act.trim().toLowerCase()] !== undefined;
-                let badgeHtml = isDownloaded ? `<span style="background: rgba(29, 185, 84, 0.15); color: #1DB954; border: 1px solid rgba(29, 185, 84, 0.3); padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 800; margin-right: 8px;">متوفرة بالقلم ✔</span>` : '';
+                
+                let matIdHtml = subj.mat_id ? `<div style="display:flex; align-items:center; justify-content:center; background:var(--brand-color); color:#000; font-size:14px; font-weight:900; width:36px; height:36px; border-radius:8px; margin-left:12px; flex-shrink:0; box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);">${subj.mat_id}</div>` : '';
 
                 let corruptedBadge = subj.is_corrupted
                     ? `<span style="background: rgba(255, 149, 0, 0.15); color: #FF9500; border: 1px solid rgba(255, 149, 0, 0.3); padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 800; margin-right: 8px; animation: pulseGlow 2s infinite;">تحديث متاح ✨</span>`
                     : '';
 
                 searchGrid.innerHTML += `
-                    <div class="${itemClass}" style="display:flex; align-items:center; justify-content:space-between; width:100%; cursor:pointer; padding: 12px 16px; border-radius: 16px; background: var(--bg-elevated); border: 1px solid rgba(255,255,255,0.05); margin-bottom: 12px;" id="subj-search-${currentId}" onclick="toggleSubject('${subj.act}', 'cb-search-${currentId}', '${subj.subject.replace(/'/g, "\\'")}', ${subj.size_bytes || 0})">
-                        <div style="display:flex; align-items:center; flex:1;">
-                            <img class="subject-img" src="assets/subjects/${safeName}.png?v=${Date.now()}" onerror="this.src='https://ui-avatars.com/api/?name=ملزمة&background=282828&color=1DB954'" style="width: 64px; height: 64px; border-radius: 12px; object-fit: cover;">
-                            <div class="subject-info" style="display:flex; flex-direction:column; justify-content:center; margin-right: 16px;">
-                                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 4px;">
-                                    <div class="subject-title" style="margin-bottom: 0;">${subj.subject.replace(/\s*\/\s*/g, ' - ')} ${corruptedBadge}</div>
+                    <div class="${itemClass}" style="display:flex; align-items:center; justify-content:space-between; width:100%; ${cursorStyle} padding: 12px 16px; border-radius: 16px; background: var(--bg-elevated); border: 1px solid rgba(255,255,255,0.05); margin-bottom: 12px;" id="subj-search-${currentId}" onclick="toggleSubject('${subj.act}', 'cb-search-${currentId}', '${subj.subject.replace(/'/g, "\\'")}', ${subj.size_bytes || 0})">
+                        <div style="display:flex; align-items:center; flex:1; overflow: hidden;">
+                            ${matIdHtml}
+                            <img class="subject-img" src="assets/subjects/${safeName}.png?v=${Date.now()}" onerror="this.src='https://ui-avatars.com/api/?name=ملزمة&background=282828&color=1DB954'" onmouseenter="this.style.transform='scale(1.15)'" onmouseleave="this.style.transform='scale(1)'" onclick="openImageModal(this.src, event)" style="width: 56px; height: 56px; border-radius: 12px; object-fit: cover; transition: transform 0.2s ease; position: relative; z-index: 10; cursor: zoom-in;">
+                            <div class="subject-info" style="display:flex; flex-direction:column; justify-content:center; margin-right: 16px; overflow: hidden;">
+                                <div class="subject-title" style="margin-bottom: 4px; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 15px; font-weight: 700;">${subj.subject.replace(/\s*\/\s*/g, ' - ')} ${corruptedBadge}</div>
+                                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
                                     <div style="font-size:12px; color:var(--text-subdued); font-weight:800; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 6px;">${subj.size_mb ? subj.size_mb.toFixed(1) : '0.0'} MB</div>
                                     ${badgeHtml}
                                 </div>
-                                <div style="font-size:13px; color:var(--text-subdued); font-weight:700;">${stageName}</div>
                             </div>
                         </div>
                         <div style="margin-left: 16px;">
-                            <input type="checkbox" class="checkbox-custom" id="cb-search-${currentId}" ${checkedAttr} data-act="${subj.act}" data-subject="${subj.subject}" data-size="${subj.size_bytes || 0}" onclick="event.stopPropagation();" onchange="onSubjectCheckboxChange(this);">
+                            <input type="checkbox" class="checkbox-custom" id="cb-search-${currentId}" ${checkedAttr} ${disabledAttr} data-act="${subj.act}" data-subject="${subj.subject.replace(/'/g, "\\'")}" data-size="${subj.size_bytes || 0}" onclick="event.stopPropagation();" onchange="onSubjectCheckboxChange(this);">
                         </div>
                     </div>
                 `;
@@ -218,12 +231,14 @@ function startSync() {
     globalSelectedSubjects.forEach((val, act) => {
         let size = "0.0 MB";
         let sizeB = val.size_bytes || 0;
+        let mat_id = "";
         for(let stage in globalStagesData) {
             let found = globalStagesData[stage].find(s => s.act === act);
             if(found && found.size_mb) size = found.size_mb.toFixed(1) + " MB";
             if(found && found.size_bytes) sizeB = found.size_bytes;
+            if(found && found.mat_id) mat_id = found.mat_id;
         }
-        selectedFiles.push({"act": act, "subject": val.subject, "size": size, "size_bytes": sizeB});
+        selectedFiles.push({"act": act, "subject": val.subject, "mat_id": mat_id, "size": size, "size_bytes": sizeB});
     });
 
     if(selectedFiles.length === 0) {
@@ -305,16 +320,17 @@ function proceedWithSync(selectedFiles) {
     let dlList = document.getElementById('downloads-list');
     dlList.innerHTML = '';
 
-    // بناء قائمة التحميل كسلسلة نصية واحدة لتحسين الأداء
     let dlHtml = '';
     selectedFiles.forEach(file => {
         let safeName = file.subject.split('\\').join('-').split('/').join('-').split(':').join('-').trim();
+        let matIdHtml = file.mat_id ? `<span style="font-size:11px; color:var(--text-subdued); font-weight:800; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 6px; margin-left: 6px;">ID: ${file.mat_id}</span>` : '';
+            
         dlHtml += `
             <div class="dl-item" id="dl-item-${file.act}">
                 <img class="dl-item-img" src="assets/subjects/${safeName}.png?v=${Date.now()}" onerror="this.src='https://ui-avatars.com/api/?name=ملزمة&background=282828&color=1DB954'">
                 <div class="dl-item-content">
                     <div class="dl-item-header">
-                        <div class="dl-item-title" id="dl-title-${file.act}">${file.subject} (${file.size})</div>
+                        <div class="dl-item-title" id="dl-title-${file.act}">${file.subject} ${matIdHtml}(${file.size})</div>
                         <div class="dl-controls" id="dl-controls-${file.act}">
                             <button class="dl-btn dl-pause" id="dl-pause-${file.act}" onclick="pauseSyncItem('${file.act}')" title="إيقاف مؤقت">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
@@ -641,7 +657,11 @@ function resetDownloadButton() {
 
     // عرض رسائل النجاح/الفشل إذا كان هناك تحديث فعلي
     if (wasActuallySyncing) {
-        if (hadSuccess && !hadFailure) {
+        if (hasPaused) {
+            try { showAlert("تم الإيقاف", "تم إيقاف بعض الملازم مؤقتاً ولن تكتمل حتى يتم استئنافها."); } catch(e){}
+            try { checkDownloadedStages(); } catch(e) {}
+            try { loadPenContents(); } catch(e) {}
+        } else if (hadSuccess && !hadFailure) {
             try { playSuccessSound(); } catch(e){}
             // إظهار نافذة النجاح مع الأنيميشن والصوت
             showSuccessModal();
@@ -898,12 +918,14 @@ async function silently_update_stages(res) {
 
 let stageStatus = {};
 let downloadedFilesCache = {};
+let downloadedBestStageCache = {};
 
 async function checkDownloadedStages() {
     stageStatus = {};
     if(currentPenDrive) {
         let acts = await eel.get_downloaded_acts(currentPenDrive)();
         downloadedFilesCache = {};
+        downloadedBestStageCache = {};
         if (Array.isArray(acts)) {
             for (let f of acts) {
                 if (f.act) {
@@ -913,6 +935,38 @@ async function checkDownloadedStages() {
                     };
                 }
             }
+            
+            // 1. حساب النقاط لكل قسم (نظام الاستنتاج الذكي للملفات المحملة)
+            let stageScores = {};
+            let filePossibleStages = {};
+
+            acts.forEach(f => {
+                if (!f.act) return;
+                let possibleStages = [];
+                for (let stg in globalStagesData) {
+                    if (globalStagesData[stg].find(s => s.act === f.act)) {
+                        possibleStages.push(stg);
+                    }
+                }
+                filePossibleStages[f.act] = possibleStages;
+
+                if (possibleStages.length === 1) {
+                    stageScores[possibleStages[0]] = (stageScores[possibleStages[0]] || 0) + 5;
+                } else if (possibleStages.length > 1) {
+                    possibleStages.forEach(st => {
+                        stageScores[st] = (stageScores[st] || 0) + 1;
+                    });
+                }
+            });
+
+            acts.forEach(f => {
+                if (!f.act) return;
+                let possibleStages = filePossibleStages[f.act] || [];
+                if (possibleStages.length > 0) {
+                    possibleStages.sort((a, b) => (stageScores[b] || 0) - (stageScores[a] || 0));
+                    downloadedBestStageCache[f.act.trim().toLowerCase()] = possibleStages[0];
+                }
+            });
         }
 
         for(let stage in globalStagesData) {
@@ -926,7 +980,9 @@ async function checkDownloadedStages() {
             for(let subj of subjects) {
                 if(subj.act) {
                     let actLower = subj.act.trim().toLowerCase();
-                    if (downloadedFilesCache[actLower] !== undefined) {
+                    let isDominant = downloadedBestStageCache[actLower] === stage;
+                    
+                    if (downloadedFilesCache[actLower] !== undefined && isDominant) {
                         let fileData = downloadedFilesCache[actLower];
                         let actualSize = fileData.size_bytes;
                         let isTmp = fileData.is_tmp;
@@ -1056,10 +1112,17 @@ function openStage(stageName) {
         selectBtn.style.borderColor = "var(--text-subdued)";
     }
 
-    let subjects = globalStagesData[stageName];
+    let subjects = globalStagesData[stageName] ? [...globalStagesData[stageName]] : [];
     subjectsGrid.innerHTML = '';
 
-    if(!subjects) return;
+    if(subjects.length === 0) return;
+
+    // ترتيب المواد حسب رقم المادة
+    subjects.sort((a, b) => {
+        let idA = parseInt(a.mat_id) || 999999;
+        let idB = parseInt(b.mat_id) || 999999;
+        return idA - idB;
+    });
 
     // بناء HTML كسلسلة واحدة لتحسين الأداء
     let html = '';
@@ -1070,7 +1133,7 @@ function openStage(stageName) {
         // التحديد التلقائي: يحدد الملازم الموجودة في القلم فقط إذا لم تكن محددة مسبقاً
         // لا نعيد تحديدها إذا كانت محددة (يحافظ على حالة التحديد اليدوي)
         let actLower = subj.act.trim().toLowerCase();
-        let isDownloaded = typeof downloadedFilesCache !== 'undefined' && downloadedFilesCache[actLower] !== undefined;
+        let isDownloaded = typeof downloadedFilesCache !== 'undefined' && downloadedFilesCache[actLower] !== undefined && downloadedBestStageCache[actLower] === stageName;
         let isCorrupted = subj.is_corrupted;
         
         let isLocked = isDownloaded && !isCorrupted;
@@ -1091,18 +1154,20 @@ function openStage(stageName) {
             : '';
 
         let badgeHtml = isDownloaded ? `<span style="background: rgba(29, 185, 84, 0.15); color: #1DB954; border: 1px solid rgba(29, 185, 84, 0.3); padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 800; margin-right: 8px;">متوفرة بالقلم ✔</span>` : '';
+        
+        let matIdHtml = subj.mat_id ? `<div style="display:flex; align-items:center; justify-content:center; background:var(--brand-color); color:#000; font-size:14px; font-weight:900; width:36px; height:36px; border-radius:8px; margin-left:12px; flex-shrink:0; box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);">${subj.mat_id}</div>` : '';
 
         html += `
             <div class="${itemClass}" style="display:flex; align-items:center; justify-content:space-between; width:100%; ${cursorStyle} padding: 12px 16px; border-radius: 16px; background: var(--bg-elevated); border: 1px solid rgba(255,255,255,0.05); margin-bottom: 12px;" id="subj-${index}" onclick="toggleSubject('${subj.act}', 'cb-${index}', '${subj.subject.replace(/'/g, "\\'")}', ${subj.size_bytes || 0})">
-                <div style="display:flex; align-items:center; flex:1;">
-                    <img class="subject-img" src="assets/subjects/${safeName}.png?v=${Date.now()}" onerror="this.src='https://ui-avatars.com/api/?name=ملزمة&background=282828&color=1DB954'" style="width: 64px; height: 64px; border-radius: 12px; object-fit: cover;">
-                    <div class="subject-info" style="display:flex; flex-direction:column; justify-content:center; margin-right: 16px;">
-                        <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 4px;">
-                            <div class="subject-title" style="margin-bottom: 0;">${subj.subject.replace(/\s*\/\s*/g, ' - ')} ${corruptedBadge}</div>
+                <div style="display:flex; align-items:center; flex:1; overflow: hidden;">
+                    ${matIdHtml}
+                    <img class="subject-img" src="assets/subjects/${safeName}.png?v=${Date.now()}" onerror="this.src='https://ui-avatars.com/api/?name=ملزمة&background=282828&color=1DB954'" onmouseenter="this.style.transform='scale(1.15)'" onmouseleave="this.style.transform='scale(1)'" onclick="openImageModal(this.src, event)" style="width: 56px; height: 56px; border-radius: 12px; object-fit: cover; flex-shrink: 0; transition: transform 0.2s ease; position: relative; z-index: 10; cursor: zoom-in;">
+                    <div class="subject-info" style="display:flex; flex-direction:column; justify-content:center; margin-right: 16px; overflow: hidden;">
+                        <div class="subject-title" style="margin-bottom: 4px; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 15px; font-weight: 700;">${subj.subject.replace(/\s*\/\s*/g, ' - ')} ${corruptedBadge}</div>
+                        <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
                             <div style="font-size:12px; color:var(--text-subdued); font-weight:800; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 6px;">${subj.size_mb ? subj.size_mb.toFixed(1) : '0.0'} MB</div>
                             ${badgeHtml}
                         </div>
-                        <div style="font-size:13px; color:var(--text-subdued); font-weight:700;">${stageName}</div>
                     </div>
                 </div>
                 <div style="margin-left: 16px;">
@@ -1126,7 +1191,7 @@ function toggleSubject(act, cbId, subjName, sizeB = 0) {
     if (!cb) return;
     
     if (cb.disabled) {
-        showToast("هذه المادة متوفرة مسبقاً ومكتملة في القلم ✔", "info");
+        showToast("ملزمة (" + subjName.replace(/\\'/g, "'") + ") متوفرة مسبقاً ومكتملة في القلم ✔", "info");
         return;
     }
 
@@ -1145,9 +1210,12 @@ function toggleSubject(act, cbId, subjName, sizeB = 0) {
 }
 
 function onSubjectCheckboxChange(cb) {
+    let act = cb.getAttribute('data-act');
+    let subjName = cb.getAttribute('data-subject');
+    
     if (cb.disabled) {
         cb.checked = true; // Force it to remain checked
-        showToast("هذه المادة متوفرة مسبقاً ومكتملة في القلم ✔", "info");
+        showToast("ملزمة (" + subjName.replace(/\\'/g, "'") + ") متوفرة مسبقاً ومكتملة في القلم ✔", "info");
         return;
     }
     
@@ -1157,8 +1225,6 @@ function onSubjectCheckboxChange(cb) {
         return;
     }
 
-    let act = cb.getAttribute('data-act');
-    let subjName = cb.getAttribute('data-subject');
     let sizeB = parseInt(cb.getAttribute('data-size') || "0");
     let itemDiv = document.getElementById(cb.id.replace('cb-', 'subj-'));
 
@@ -1233,18 +1299,42 @@ async function loadPenContents() {
     let groupedFiles = {};
     let unknownStageFiles = [];
 
+    // 1. حساب النقاط لكل قسم (نظام الاستنتاج الذكي)
+    let stageScores = {};
+    let filePossibleStages = {};
+
     files.forEach(f => {
-        let foundStage = null;
-        for(let stage in globalStagesData) {
-            if(globalStagesData[stage].find(s => s.act === f.act)) {
-                foundStage = stage;
-                break;
+        let possibleStages = [];
+        for (let stage in globalStagesData) {
+            if (globalStagesData[stage].find(s => s.act === f.act)) {
+                possibleStages.push(stage);
             }
         }
+        filePossibleStages[f.act] = possibleStages;
 
-        if (foundStage) {
-            if (!groupedFiles[foundStage]) groupedFiles[foundStage] = [];
-            groupedFiles[foundStage].push(f);
+        if (possibleStages.length === 1) {
+            stageScores[possibleStages[0]] = (stageScores[possibleStages[0]] || 0) + 5; // مادة متخصصة تعطي دلالة قوية
+        } else if (possibleStages.length > 1) {
+            possibleStages.forEach(st => {
+                stageScores[st] = (stageScores[st] || 0) + 1; // مادة مشتركة تعطي دلالة ضعيفة
+            });
+        }
+    });
+
+    // 2. فرز الملفات وتوزيعها على الأقسام بناءً على الأغلبية
+    files.forEach(f => {
+        let possibleStages = filePossibleStages[f.act] || [];
+        let bestStage = null;
+
+        if (possibleStages.length > 0) {
+            // ترتيب الأقسام تنازلياً حسب النقاط
+            possibleStages.sort((a, b) => (stageScores[b] || 0) - (stageScores[a] || 0));
+            bestStage = possibleStages[0]; // نختار القسم صاحب أعلى تقييم
+        }
+
+        if (bestStage) {
+            if (!groupedFiles[bestStage]) groupedFiles[bestStage] = [];
+            groupedFiles[bestStage].push(f);
         } else {
             unknownStageFiles.push(f);
         }
@@ -1271,7 +1361,14 @@ async function loadPenContents() {
         `;
 
         // Subjects Grid
-        groupHtml += `<div class="grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">`;
+        groupHtml += `<div class="list" style="display: flex; flex-direction: column; gap: 8px;">`;
+
+        // ترتيب محتويات القلم حسب رقم المادة
+        stageFiles.sort((a, b) => {
+            let idA = parseInt(a.mat_id) || 999999;
+            let idB = parseInt(b.mat_id) || 999999;
+            return idA - idB;
+        });
 
         stageFiles.forEach((f, index) => {
             let safeName = f.subject.split('\\').join('-').split('/').join('-').split(':').join('-').trim();
@@ -1285,12 +1382,17 @@ async function loadPenContents() {
                 }
             }
 
+            let matIdHtml = f.mat_id ? `<div style="display:flex; align-items:center; justify-content:center; background:var(--brand-color); color:#000; font-size:14px; font-weight:900; width:36px; height:36px; border-radius:8px; margin-left:12px; flex-shrink:0; box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);">${f.mat_id}</div>` : '';
+
             groupHtml += `
                 <div class="subject-item" style="position:relative; overflow:hidden; padding: 12px 16px; border-radius: 16px; background: var(--bg-elevated); border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 16px; transition: all 0.2s;" id="pen-item-${f.act}">
-                    <img class="subject-img" src="assets/subjects/${safeName}.png?v=${Date.now()}" onerror="this.src='https://ui-avatars.com/api/?name=ملزمة&background=282828&color=1DB954'" style="width: 56px; height: 56px; border-radius: 10px; object-fit: cover;">
-                    <div class="subject-info" style="flex: 1;">
-                        <div class="subject-title" style="white-space: normal; line-height: 1.4; font-size: 14px; font-weight: 700; color: var(--text-base); margin-bottom: 6px;">${f.subject.replace(/\s*\/\s*/g, ' - ')}</div>
-                        <div style="font-size:12px; color:var(--text-subdued); font-weight:800; background: rgba(255,255,255,0.05); display: inline-block; padding: 2px 8px; border-radius: 6px;">${displaySize.toFixed(1)} MB</div>
+                    ${matIdHtml}
+                    <img class="subject-img" src="assets/subjects/${safeName}.png?v=${Date.now()}" onerror="this.src='https://ui-avatars.com/api/?name=ملزمة&background=282828&color=1DB954'" onmouseenter="this.style.transform='scale(1.15)'" onmouseleave="this.style.transform='scale(1)'" onclick="openImageModal(this.src, event)" style="width: 56px; height: 56px; border-radius: 10px; object-fit: cover; flex-shrink: 0; transition: transform 0.2s ease; position: relative; z-index: 10; cursor: zoom-in;">
+                    <div class="subject-info" style="flex: 1; overflow: hidden;">
+                        <div class="subject-title" style="white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; font-size: 14px; font-weight: 700; color: var(--text-base); margin-bottom: 6px;" title="${f.subject}">${f.subject.replace(/\s*\/\s*/g, ' - ')}</div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="font-size:12px; color:var(--text-subdued); font-weight:800; background: rgba(255,255,255,0.05); display: inline-block; padding: 2px 8px; border-radius: 6px;">${displaySize.toFixed(1)} MB</div>
+                        </div>
                     </div>
                     
                     <!-- Delete Button embedded in card -->
@@ -1401,25 +1503,28 @@ function showToast(message, type = 'info') {
     let toast = document.createElement('div');
     toast.id = 'app-toast';
     
-    let posCss = `bottom: 130px; left: 50%; transform: translateX(-50%);`;
-    if (window.lastMouseX && window.lastMouseY) {
-        let y = Math.max(20, window.lastMouseY - 60);
-        posCss = `top: ${y}px; left: ${window.lastMouseX}px; transform: translateX(-50%);`;
-        window.lastMouseX = null;
-        window.lastMouseY = null;
-    }
+    // Fixed position centered at the bottom of the screen
+    let posCss = `bottom: 50px; left: 50%; transform: translateX(-50%);`;
 
     toast.style.cssText = `
         position: fixed; ${posCss}
         background: var(--bg-elevated);
-        color: var(--text-base); padding: 12px 24px; border-radius: 12px;
-        font-size: 14px; font-weight: 700; z-index: 99999;
+        color: var(--text-base); padding: 14px 28px; border-radius: 12px;
+        font-size: 15px; font-weight: 700; z-index: 99999;
         border: 1px solid rgba(255,255,255,0.05);
         border-bottom: 3px solid ${type === 'error' ? '#FF3B30' : '#1DB954'};
         box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-        animation: fadeIn 0.3s ease;
+        animation: toastSlideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         display: flex; align-items: center; gap: 12px;
     `;
+    
+    // Inject animation keyframes if not exists
+    if (!document.getElementById('toast-keyframes')) {
+        let style = document.createElement('style');
+        style.id = 'toast-keyframes';
+        style.innerHTML = `@keyframes toastSlideUp { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }`;
+        document.head.appendChild(style);
+    }
     let icon = type === 'error' ? '⚠️' : '✅';
     toast.innerHTML = `<span style="font-size:18px;">${icon}</span> <span>${message}</span>`;
     
@@ -1695,3 +1800,31 @@ function close_window() {
     window.close();
 }
 
+// Image Modal Functions
+window.openImageModal = function(src, event) {
+    if(event) {
+        event.stopPropagation(); // Prevent toggling the subject when clicking the image
+    }
+    const modal = document.getElementById('image-modal');
+    const img = document.getElementById('image-modal-img');
+    if(modal && img) {
+        img.src = src;
+        modal.style.display = 'flex';
+        // Trigger reflow for transition
+        void modal.offsetWidth;
+        modal.style.opacity = '1';
+        img.style.transform = 'scale(1)';
+    }
+}
+
+window.closeImageModal = function() {
+    const modal = document.getElementById('image-modal');
+    const img = document.getElementById('image-modal-img');
+    if(modal && img) {
+        modal.style.opacity = '0';
+        img.style.transform = 'scale(0.8)';
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 300); // match transition duration
+    }
+}
